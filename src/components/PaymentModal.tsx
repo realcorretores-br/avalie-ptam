@@ -134,57 +134,7 @@ export const PaymentModal = ({ open, onOpenChange, paymentUrl, pixCode, pixImage
             )
           )}
 
-          {/* Manual Check Button - Always visible if not approved */}
-          {!paymentApproved && (
-            <div className="p-4 w-full border-t bg-background">
-              <button
-                onClick={async () => {
-                  try {
-                    setLoading(true);
-                    // Get the latest purchase ID
-                    const { data: purchase } = await supabase
-                      .from('additional_reports_purchases')
-                      .select('id')
-                      .eq('user_id', user?.id)
-                      .order('created_at', { ascending: false })
-                      .limit(1)
-                      .single();
 
-                    if (purchase) {
-                      const { data, error } = await supabase.functions.invoke('create-additional-reports-payment', {
-                        body: {
-                          action: 'check_status',
-                          purchaseId: purchase.id
-                        }
-                      });
-
-                      if (error) throw error;
-
-                      if (data.status === 'approved') {
-                        setPaymentApproved(true);
-                        toast.success('Pagamento confirmado!');
-                        setTimeout(() => {
-                          onOpenChange(false);
-                          navigate('/dashboard?payment=success');
-                        }, 1500);
-                      } else {
-                        toast.info('Pagamento ainda não identificado. Tente novamente em alguns instantes.');
-                      }
-                    }
-                  } catch (error) {
-                    console.error('Error checking payment:', error);
-                    toast.error('Erro ao verificar pagamento');
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                className="w-full py-2 px-4 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                <CheckCircle className="h-4 w-4" />
-                Já realizei o pagamento
-              </button>
-            </div>
-          )}
         </div>
       </DialogContent>
     </Dialog>
