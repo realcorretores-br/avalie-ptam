@@ -324,9 +324,7 @@ const Dashboard = () => {
         open={showAddReportsDialog}
         onOpenChange={setShowAddReportsDialog}
         onSuccess={() => {
-          refetchSubscription();
-          // Redirect to dashboard
-          navigate('/dashboard');
+          // Refresh subscription data or show success message
         }}
       />
     </div>

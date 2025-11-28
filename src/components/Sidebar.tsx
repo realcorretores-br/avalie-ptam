@@ -312,7 +312,6 @@ export const Sidebar = ({ className }: SidebarProps) => {
                 onOpenChange={setShowAddReportsDialog}
                 onSuccess={() => {
                     refreshProfile();
-                    navigate('/dashboard');
                 }}
             />
         </div>
