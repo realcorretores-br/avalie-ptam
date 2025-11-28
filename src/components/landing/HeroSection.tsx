@@ -45,7 +45,7 @@ export const HeroSection = ({ content }: HeroSectionProps) => {
                     <Button
                         size="lg"
                         className="rounded-full text-base h-12 px-8 shadow-lg shadow-primary/25 bg-[linear-gradient(135deg,#8b5cf6_0%,#3b82f6_100%)] hover:opacity-90 transition-opacity"
-                        onClick={() => navigate('/auth')}
+                        onClick={() => navigate('/cadastro')}
                     >
                         Começar Grátis
                     </Button>
