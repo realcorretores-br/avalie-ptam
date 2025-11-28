@@ -201,16 +201,14 @@ const Perfil = () => {
           )
         `)
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(300);
+        .order('created_at', { ascending: false });
 
       // Fetch additional reports purchases
       const { data: purchases, error: purchasesError } = await supabase
         .from('additional_reports_purchases')
         .select('id, created_at, status, quantidade, preco_total, payment_id')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(300);
+        .order('created_at', { ascending: false });
 
       if (subsError) throw subsError;
       if (purchasesError) throw purchasesError;
