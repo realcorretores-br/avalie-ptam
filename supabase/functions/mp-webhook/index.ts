@@ -195,6 +195,29 @@ serve(async (req) => {
 
           if (existingSubscription) {
             console.log('Updating existing subscription:', existingSubscription.id);
+
+            // Check for downgrade (if new plan price is lower than current plan price)
+            // We need to fetch the current plan to compare prices
+            const { data: currentPlan } = await supabaseClient
+              .from('plans')
+              .select('preco')
+              .eq('id', existingSubscription.plan_id)
+              .single();
+
+            let legacyCredits = existingSubscription.legacy_credits || 0;
+            let legacyExpiresAt = existingSubscription.legacy_credits_expires_at;
+
+            // If it's a downgrade (new price < old price), move current credits to legacy
+            if (currentPlan && plan.preco < currentPlan.preco) {
+              console.log('Downgrade detected. Moving credits to legacy.');
+              legacyCredits += existingSubscription.relatorios_disponiveis;
+
+              // Set expiry to 3 days from now
+              const expiryDate = new Date();
+              expiryDate.setDate(expiryDate.getDate() + 3);
+              legacyExpiresAt = expiryDate.toISOString();
+            }
+
             // Atualizar assinatura existente
             const { error: updateError } = await supabaseClient
               .from('subscriptions')
@@ -202,7 +225,9 @@ serve(async (req) => {
                 plan_id: planId,
                 payment_id: paymentId,
                 payment_status: 'approved',
-                relatorios_disponiveis: existingSubscription.relatorios_disponiveis + plan.relatorios_incluidos,
+                relatorios_disponiveis: plan.relatorios_incluidos, // Reset to new plan's limit
+                legacy_credits: legacyCredits,
+                legacy_credits_expires_at: legacyExpiresAt,
                 data_expiracao: plan.tipo === 'avulso'
                   ? existingSubscription.data_expiracao
                   : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
