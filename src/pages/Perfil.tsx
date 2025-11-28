@@ -45,7 +45,8 @@ type Tab = 'perfil' | 'assinatura' | 'pagamentos' | 'anotacoes';
 
 const Perfil = () => {
   const { user, profile, refreshProfile } = useAuth();
-  const { subscription } = useSubscription();
+  const { subscription, refetch: refetchSubscription } = useSubscription();
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>('perfil');
@@ -852,6 +853,8 @@ const Perfil = () => {
         onOpenChange={setShowAddReportsDialog}
         onSuccess={() => {
           fetchPaymentHistory();
+          refetchSubscription();
+          refreshProfile();
         }}
       />
     </div>
