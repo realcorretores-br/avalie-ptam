@@ -177,16 +177,26 @@ serve(async (req) => {
           }
 
           // Verificar se já existe assinatura ativa
-          const { data: existingSubscription } = await supabaseClient
+          // Use limit(1) and order by created_at desc to handle potential duplicates gracefully
+          const { data: existingSubscription, error: subError } = await supabaseClient
             .from('subscriptions')
             .select('*')
             .eq('user_id', userId)
             .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1)
             .maybeSingle();
 
+          if (subError) {
+            console.error('Error fetching existing subscription:', subError);
+          }
+
+          console.log('Existing subscription found:', existingSubscription ? existingSubscription.id : 'None');
+
           if (existingSubscription) {
+            console.log('Updating existing subscription:', existingSubscription.id);
             // Atualizar assinatura existente
-            await supabaseClient
+            const { error: updateError } = await supabaseClient
               .from('subscriptions')
               .update({
                 plan_id: planId,
@@ -198,9 +208,17 @@ serve(async (req) => {
                   : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
               })
               .eq('id', existingSubscription.id);
+
+            if (updateError) {
+              console.error('Error updating subscription:', updateError);
+              throw new Error('Failed to update subscription');
+            }
+            console.log('Subscription updated successfully');
+
           } else {
+            console.log('Creating new subscription for user:', userId);
             // Criar nova assinatura
-            await supabaseClient.from('subscriptions').insert({
+            const { error: insertError } = await supabaseClient.from('subscriptions').insert({
               user_id: userId,
               plan_id: planId,
               status: 'active',
@@ -213,13 +231,23 @@ serve(async (req) => {
                 ? null
                 : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             });
+
+            if (insertError) {
+              console.error('Error creating subscription:', insertError);
+              throw new Error('Failed to create subscription');
+            }
+            console.log('New subscription created successfully');
           }
 
           // Atualizar profile - remover bloqueio
-          await supabaseClient
+          const { error: profileError } = await supabaseClient
             .from('profiles')
             .update({ bloqueado_ate: null })
             .eq('id', userId);
+
+          if (profileError) {
+            console.error('Error updating profile:', profileError);
+          }
         }
       }
     }
