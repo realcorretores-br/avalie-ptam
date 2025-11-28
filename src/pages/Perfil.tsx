@@ -24,6 +24,13 @@ import { AddReportsDialog } from "@/components/user/AddReportsDialog";
 import { ThemeColorPicker } from "@/components/ThemeColorPicker";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { maskCPF, maskRG, maskCNPJ } from "@/lib/masks";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface PaymentHistory {
   id: string;
@@ -60,6 +67,7 @@ const Perfil = () => {
   const [updatingAutoRenew, setUpdatingAutoRenew] = useState(false);
   const [showAddReportsDialog, setShowAddReportsDialog] = useState(false);
   const [themeColor, setThemeColor] = useState(profile?.theme_color || "blue");
+  const [selectedMonth, setSelectedMonth] = useState<string>("all");
 
   useThemeColor();
 
@@ -352,11 +360,11 @@ const Perfil = () => {
     }
   };
 
-  const getStatusLabel = (status: string) => {
+  const getStatusLabel = (status: string, type?: string) => {
     switch (status) {
       case 'active':
       case 'approved':
-        return 'Ativo';
+        return type === 'additional_reports' ? 'Pago' : 'Ativo';
       case 'pending':
         return 'Pendente';
       case 'expired':
@@ -773,9 +781,31 @@ const Perfil = () => {
           {/* Histórico de Pagamentos Tab */}
           {activeTab === 'pagamentos' && (
             <Card className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <Receipt className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">Histórico de Pagamentos</h2>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Receipt className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-semibold">Histórico de Pagamentos</h2>
+                </div>
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filtrar por mês" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os meses</SelectItem>
+                    {Array.from(new Set(paymentHistory.map(p => {
+                      const date = new Date(p.created_at);
+                      return `${date.getMonth() + 1}/${date.getFullYear()}`;
+                    }))).map(monthYear => {
+                      const [month, year] = monthYear.split('/');
+                      const date = new Date(parseInt(year), parseInt(month) - 1);
+                      return (
+                        <SelectItem key={monthYear} value={monthYear}>
+                          {date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
               </div>
               {paymentHistory.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">
@@ -794,45 +824,52 @@ const Perfil = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paymentHistory.map((payment) => (
-                      <TableRow key={payment.id}>
-                        <TableCell>
-                          {new Date(payment.created_at).toLocaleDateString('pt-BR')}
-                        </TableCell>
-                        <TableCell>
-                          {payment.type === 'additional_reports'
-                            ? `${payment.quantidade} Relatório${payment.quantidade! > 1 ? 's' : ''} Avulso${payment.quantidade! > 1 ? 's' : ''}`
-                            : payment.plans?.nome}
-                        </TableCell>
-                        <TableCell>
-                          R$ {payment.type === 'additional_reports'
-                            ? payment.preco_total?.toFixed(2)
-                            : payment.plans?.preco.toFixed(2)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={`${getStatusColor(payment.status)} text-white border-none`}>
-                            {getStatusLabel(payment.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {payment.type === 'additional_reports'
-                            ? 'Créditos Avulsos'
-                            : `${new Date(payment.data_inicio!).toLocaleDateString('pt-BR')} - ${new Date(payment.data_expiracao!).toLocaleDateString('pt-BR')}`}
-                        </TableCell>
-                        <TableCell>
-                          {payment.status === 'pending' && payment.payment_id && (
-                            <Button
-                              size="sm"
-                              onClick={() => handlePayNow(payment)}
-                              className="bg-primary hover:bg-primary/90"
-                            >
-                              Pagar Agora
-                            </Button>
-                          )}
-                          {/* Se estiver expirado ou cancelado, não mostra nada */}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {paymentHistory
+                      .filter(payment => {
+                        if (selectedMonth === 'all') return true;
+                        const date = new Date(payment.created_at);
+                        const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
+                        return monthYear === selectedMonth;
+                      })
+                      .map((payment) => (
+                        <TableRow key={payment.id}>
+                          <TableCell>
+                            {new Date(payment.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell>
+                            {payment.type === 'additional_reports'
+                              ? `${payment.quantidade} Relatório${payment.quantidade! > 1 ? 's' : ''} Avulso${payment.quantidade! > 1 ? 's' : ''}`
+                              : payment.plans?.nome}
+                          </TableCell>
+                          <TableCell>
+                            R$ {payment.type === 'additional_reports'
+                              ? payment.preco_total?.toFixed(2)
+                              : payment.plans?.preco.toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`${getStatusColor(payment.status)} text-white border-none`}>
+                              {getStatusLabel(payment.status, payment.type)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {payment.type === 'additional_reports'
+                              ? 'Créditos Avulsos'
+                              : `${new Date(payment.data_inicio!).toLocaleDateString('pt-BR')} - ${new Date(payment.data_expiracao!).toLocaleDateString('pt-BR')}`}
+                          </TableCell>
+                          <TableCell>
+                            {payment.status === 'pending' && payment.payment_id && (
+                              <Button
+                                size="sm"
+                                onClick={() => handlePayNow(payment)}
+                                className="bg-primary hover:bg-primary/90"
+                              >
+                                Pagar Agora
+                              </Button>
+                            )}
+                            {/* Se estiver expirado ou cancelado, não mostra nada */}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
                 </Table>
               )}
