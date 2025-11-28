@@ -20,28 +20,72 @@ export const PaymentModal = ({ open, onOpenChange, paymentUrl, pixCode, pixImage
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const [initialPaymentId, setInitialPaymentId] = useState<string | null>(null);
+  const [initialPurchaseId, setInitialPurchaseId] = useState<string | null>(null);
+
   useEffect(() => {
-    if (!open || !user) return;
+    if (!open || !user) {
+      setPaymentApproved(false);
+      setInitialPaymentId(null);
+      setInitialPurchaseId(null);
+      return;
+    }
+
+    // Capture initial state
+    const captureInitialState = async () => {
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('payment_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (subscription?.payment_id) {
+        setInitialPaymentId(subscription.payment_id);
+      }
+
+      const { data: purchase } = await supabase
+        .from('additional_reports_purchases')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (purchase?.id) {
+        setInitialPurchaseId(purchase.id);
+      }
+    };
+
+    captureInitialState();
 
     // Poll for payment status every 3 seconds
     const checkPaymentStatus = async () => {
       try {
         const { data: subscription } = await supabase
           .from('subscriptions')
-          .select('payment_status')
+          .select('payment_status, payment_id')
           .eq('user_id', user.id)
           .eq('status', 'active')
           .maybeSingle();
 
         const { data: purchase } = await supabase
           .from('additional_reports_purchases')
-          .select('payment_status')
+          .select('payment_status, id')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        if (subscription?.payment_status === 'approved' || purchase?.payment_status === 'approved') {
+        // Check if subscription payment is approved AND it's a NEW payment
+        const isNewSubscriptionPayment = subscription?.payment_status === 'approved' &&
+          (!initialPaymentId || (subscription.payment_id && subscription.payment_id !== initialPaymentId));
+
+        // Check if purchase payment is approved AND it's a NEW purchase
+        const isNewPurchasePayment = purchase?.payment_status === 'approved' &&
+          (!initialPurchaseId || (purchase.id && purchase.id !== initialPurchaseId));
+
+        if (isNewSubscriptionPayment || isNewPurchasePayment) {
           setPaymentApproved(true);
           toast.success('Pagamento aprovado! Redirecionando...');
 
@@ -59,7 +103,7 @@ export const PaymentModal = ({ open, onOpenChange, paymentUrl, pixCode, pixImage
     const interval = setInterval(checkPaymentStatus, 3000);
 
     return () => clearInterval(interval);
-  }, [open, user, navigate, onOpenChange]);
+  }, [open, user, navigate, onOpenChange, initialPaymentId, initialPurchaseId]);
 
   const copyPixCode = () => {
     if (pixCode) {
