@@ -855,6 +855,7 @@ const Perfil = () => {
           fetchPaymentHistory();
           refetchSubscription();
           refreshProfile();
+          navigate('/dashboard');
         }}
       />
     </div>
