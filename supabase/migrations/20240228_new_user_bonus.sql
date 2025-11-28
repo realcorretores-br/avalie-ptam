@@ -1,6 +1,9 @@
+-- Remove unique constraint on 'tipo' if it exists, to allow multiple plans of the same type
+ALTER TABLE plans DROP CONSTRAINT IF EXISTS plans_tipo_key;
+
 -- Create 'Plano Gratuito' if it doesn't exist
 INSERT INTO plans (nome, descricao, preco, relatorios_incluidos, tipo, ativo)
-SELECT 'Plano Gratuito', 'Plano inicial com 1 crédito grátis', 0, 1, 'gratuito', true
+SELECT 'Plano Gratuito', 'Plano inicial com 1 crédito grátis', 0, 1, 'avulso', true
 WHERE NOT EXISTS (SELECT 1 FROM plans WHERE nome = 'Plano Gratuito');
 
 -- Function to handle new user signup
