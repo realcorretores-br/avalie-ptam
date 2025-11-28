@@ -8,17 +8,6 @@ import { toast } from "sonner";
 import { Check, Building2, ArrowLeft } from "lucide-react";
 import { PaymentModal } from "@/components/PaymentModal";
 import { AddCreditsModal } from "@/components/AddCreditsModal";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useSubscription } from "@/hooks/useSubscription";
 
 interface Plan {
   id: string;
@@ -31,7 +20,6 @@ interface Plan {
 
 const Planos = () => {
   const { user } = useAuth();
-  const { subscription } = useSubscription();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -39,8 +27,6 @@ const Planos = () => {
   const [paymentUrl, setPaymentUrl] = useState<string>('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCreditsModal, setShowCreditsModal] = useState(false);
-  const [showDowngradeAlert, setShowDowngradeAlert] = useState(false);
-  const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -59,62 +45,9 @@ const Planos = () => {
   const handleSelectPlan = async (quantity: number = 1) => {
     if (!selectedPlan || !user) return;
 
-    const plan = plans.find(p => p.id === selectedPlan);
-    if (!plan) return;
-
-    // Check for downgrade
-    if (subscription && subscription.plans && plan.tipo !== 'avulso') {
-      const currentPlanPrice = subscription.plans.preco || 0; // Assuming price is available in subscription.plans
-      // Note: useSubscription hook might need to fetch price if not already there.
-      // Based on previous file view, useSubscription selects plans(nome, tipo). We might need to update it or fetch here.
-      // For now, let's assume we can get it or fetch it.
-      // Actually, let's fetch the current plan details to be safe if not in subscription object
-    }
-
-    // Simplified check: if we have a subscription and selecting a new monthly plan
-    if (subscription && plan.tipo !== 'avulso') {
-      // We need to compare prices. 
-      // Let's proceed with the selection logic directly for now, but intercept it.
-      proceedWithPlanSelection(selectedPlan, quantity);
-    } else {
-      proceedWithPlanSelection(selectedPlan, quantity);
-    }
-  };
-
-  const checkDowngradeAndProceed = (planId: string, quantity: number = 1) => {
-    const plan = plans.find(p => p.id === planId);
-    if (!plan) return;
-
-    // If it's an avulso purchase, no downgrade logic needed
-    if (plan.tipo === 'avulso') {
-      proceedWithPlanSelection(planId, quantity);
-      return;
-    }
-
-    // If user has an active subscription
-    if (subscription && (subscription as any).plans) {
-      // Find current plan price from the plans list (assuming we have all plans)
-      // The subscription object has plans: { nome: string }. It might not have price.
-      // We can try to find the current plan in the 'plans' state by name or we need the plan_id from subscription.
-      const currentPlanId = subscription.plan_id;
-      const currentPlan = plans.find(p => p.id === currentPlanId);
-
-      if (currentPlan && plan.preco < currentPlan.preco) {
-        setPendingPlanId(planId);
-        setShowDowngradeAlert(true);
-        return;
-      }
-    }
-
-    proceedWithPlanSelection(planId, quantity);
-  };
-
-  const proceedWithPlanSelection = async (planId: string, quantity: number = 1) => {
     setLoading(true);
-    setShowDowngradeAlert(false);
-
     try {
-      const plan = plans.find(p => p.id === planId);
+      const plan = plans.find(p => p.id === selectedPlan);
 
       if (!plan) {
         toast.error('Plano não encontrado');
@@ -128,18 +61,19 @@ const Planos = () => {
 
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
-          planId: planId,
+          planId: selectedPlan,
           userId: user.id,
-          quantity: quantity
+          quantity: quantity // Pass quantity to the backend
         }
       });
 
       if (error) throw error;
 
       if (data.init_point) {
+        // Abrir modal ao invés de redirecionar
         setPaymentUrl(data.init_point);
         setShowPaymentModal(true);
-        setShowCreditsModal(false);
+        setShowCreditsModal(false); // Close credits modal if open
       }
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -330,7 +264,7 @@ const Planos = () => {
           <div className="text-center space-y-4">
             <Button
               size="lg"
-              onClick={() => checkDowngradeAndProceed(selectedPlan!, 1)}
+              onClick={() => handleSelectPlan(1)}
               disabled={!selectedPlan || loading}
               className="px-16 py-6 text-lg shadow-lg"
             >
@@ -359,25 +293,6 @@ const Planos = () => {
         onOpenChange={setShowPaymentModal}
         paymentUrl={paymentUrl}
       />
-
-      <AlertDialog open={showDowngradeAlert} onOpenChange={setShowDowngradeAlert}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Atenção: Mudança de Plano</AlertDialogTitle>
-            <AlertDialogDescription>
-              Você está alterando para um plano de menor valor. Seus créditos atuais ficarão disponíveis por apenas <strong>3 dias</strong> após a confirmação.
-              Após esse período, os créditos não utilizados do plano anterior expirarão.
-              Deseja continuar?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => proceedWithPlanSelection(pendingPlanId!)}>
-              Continuar e Alterar Plano
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

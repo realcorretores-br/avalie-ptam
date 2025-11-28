@@ -12,7 +12,6 @@ interface Subscription {
   data_expiracao: string;
   plans: {
     nome: string;
-    preco: number;
   };
 }
 
@@ -46,8 +45,7 @@ export const useSubscription = () => {
           *,
           plans (
             nome,
-            tipo,
-            preco
+            tipo
           )
         `)
         .eq('user_id', user.id)

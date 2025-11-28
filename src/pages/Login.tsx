@@ -50,11 +50,10 @@ const Login = () => {
       });
 
       if (error) {
-        console.error('Login error:', error);
-        if (error.message && error.message.includes('Invalid login credentials')) {
+        if (error.message.includes('Invalid login credentials')) {
           toast.error('Email ou senha incorretos');
         } else {
-          toast.error(error.message || 'Erro desconhecido ao fazer login');
+          toast.error(error.message);
         }
       } else {
         toast.success('Login realizado com sucesso!');
