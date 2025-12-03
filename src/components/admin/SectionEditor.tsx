@@ -94,7 +94,7 @@ export const SectionEditor = ({
                     description: content.description,
                     image_url: content.image_url,
                     ...(content.id ? { id: content.id } : {})
-                });
+                }, { onConflict: 'section' });
 
             if (error) throw error;
             toast.success('Seção atualizada com sucesso');
@@ -185,6 +185,7 @@ export const SectionEditor = ({
                                     <DialogTitle>{editingItem?.id ? 'Editar' : 'Adicionar'} {itemLabel}</DialogTitle>
                                 </DialogHeader>
                                 <ItemForm
+                                    key={editingItem?.id || 'new'}
                                     item={editingItem || {} as LandingItem}
                                     onSave={handleSaveItem}
                                     fields={itemFields}
@@ -314,6 +315,7 @@ const SectionContentForm = ({ content, onSave, labels }: { content: LandingConte
 
 const ItemForm = ({ item, onSave, fields, predefinedIcons, categories }: { item: Partial<LandingItem>, onSave: (i: Partial<LandingItem>) => void, fields: any, predefinedIcons?: string[], categories?: string[] }) => {
     const [localItem, setLocalItem] = useState(item);
+    const [jsonString, setJsonString] = useState(JSON.stringify(item.metadata || {}, null, 2));
 
     // Ensure metadata exists
     if (!localItem.metadata) {
@@ -418,18 +420,20 @@ const ItemForm = ({ item, onSave, fields, predefinedIcons, categories }: { item:
                     <Label>Metadados (JSON - Preço, Role, etc)</Label>
                     <Textarea
                         className="font-mono text-xs"
-                        value={JSON.stringify(localItem.metadata || {}, null, 2)}
+                        value={jsonString}
                         onChange={(e) => {
+                            const newValue = e.target.value;
+                            setJsonString(newValue);
                             try {
-                                const parsed = JSON.parse(e.target.value);
-                                setLocalItem({ ...localItem, metadata: parsed });
+                                const parsed = JSON.parse(newValue);
+                                setLocalItem(prev => ({ ...prev, metadata: parsed }));
                             } catch (err) {
                                 // Allow typing invalid JSON temporarily
                             }
                         }}
-                        rows={5}
+                        rows={10}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Edite o JSON com cuidado.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Edite o JSON com cuidado. Erros de sintaxe impedirão o salvamento dos metadados.</p>
                 </div>
             )}
 
