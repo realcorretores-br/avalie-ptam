@@ -114,8 +114,13 @@ export const PaymentModal = ({ open, onOpenChange, paymentUrl, pixCode, pixImage
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh]">
-
+      <DialogContent className="max-w-4xl h-[90vh]" aria-describedby="payment-modal-description">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Pagamento</DialogTitle>
+        </DialogHeader>
+        <div id="payment-modal-description" className="sr-only">
+          Janela de pagamento para finalizar a compra do plano ou créditos.
+        </div>
 
         <div className="relative w-full h-full flex flex-col items-center justify-center">
           {paymentApproved && (
