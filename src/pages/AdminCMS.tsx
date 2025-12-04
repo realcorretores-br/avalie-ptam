@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -63,10 +63,13 @@ const AdminCMS = () => {
 
 
 
+  const hasFetched = useRef(false);
+
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin && !hasFetched.current) {
       fetchPlans();
       fetchLandingContent();
+      hasFetched.current = true;
     }
   }, [isAdmin]);
 

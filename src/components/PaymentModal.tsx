@@ -81,9 +81,9 @@ export const PaymentModal = ({ open, onOpenChange, paymentUrl, pixCode, pixImage
         const isNewSubscriptionPayment = subscription?.payment_status === 'approved' &&
           (!initialPaymentId || (subscription.payment_id && subscription.payment_id !== initialPaymentId));
 
-        // Check if purchase payment is approved AND it's a NEW purchase
+        // Check if purchase payment is approved AND it's the current or a new purchase
         const isNewPurchasePayment = purchase?.payment_status === 'approved' &&
-          (!initialPurchaseId || (purchase.id && purchase.id !== initialPurchaseId));
+          (purchase.id === initialPurchaseId || !initialPurchaseId || (purchase.id && purchase.id !== initialPurchaseId));
 
         if (isNewSubscriptionPayment || isNewPurchasePayment) {
           setPaymentApproved(true);
