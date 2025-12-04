@@ -118,7 +118,7 @@ export const BenefitsSection = ({ content, ctaContent, items }: BenefitsSectionP
                                 <div className="absolute inset-0 flex items-center justify-center text-white/30 font-bold text-xl">
                                     {/* Replace src with your monitor image */}
                                     <img
-                                        src={ctaContent?.image_url || "/dashboard-preview.png"}
+                                        src={content?.image_url || ctaContent?.image_url || "/dashboard-preview.png"}
                                         alt="Dashboard Preview"
                                         className="w-full h-full object-cover object-left-top"
                                     />

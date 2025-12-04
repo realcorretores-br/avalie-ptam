@@ -38,7 +38,7 @@ export const CreatePlanDialog = ({ open, onOpenChange, onSuccess }: CreatePlanDi
       // Validate input
       const validationResult = PlanSchema.safeParse({
         nome,
-        preco: parseFloat(preco),
+        preco: parseFloat(preco.replace(',', '.')),
         relatorios: parseInt(relatorios),
         descricao: descricao || undefined,
       });
@@ -67,14 +67,14 @@ export const CreatePlanDialog = ({ open, onOpenChange, onSuccess }: CreatePlanDi
 
       await logAction('create_plan', { nome: validatedData.nome, tipo, preco: validatedData.preco, relatorios: validatedData.relatorios });
       toast.success('Plano criado com sucesso!');
-      
+
       // Reset form
       setNome("");
       setTipo('mensal_basico');
       setPreco("");
       setRelatorios("");
       setDescricao("");
-      
+
       onSuccess();
       onOpenChange(false);
     } catch (error) {
@@ -87,9 +87,12 @@ export const CreatePlanDialog = ({ open, onOpenChange, onSuccess }: CreatePlanDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" aria-describedby="create-plan-description">
         <DialogHeader>
           <DialogTitle>Criar Novo Plano</DialogTitle>
+          <p id="create-plan-description" className="text-sm text-muted-foreground">
+            Preencha os dados abaixo para criar um novo plano de assinatura.
+          </p>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -122,11 +125,11 @@ export const CreatePlanDialog = ({ open, onOpenChange, onSuccess }: CreatePlanDi
             <Label htmlFor="preco">Preço (R$) *</Label>
             <Input
               id="preco"
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={preco}
               onChange={(e) => setPreco(e.target.value)}
-              placeholder="0.00"
+              placeholder="0,00"
             />
           </div>
 

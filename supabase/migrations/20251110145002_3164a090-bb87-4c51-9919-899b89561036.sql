@@ -73,11 +73,22 @@ CREATE TABLE public.plans (
 );
 
 -- Inserir planos padrão
-INSERT INTO public.plans (tipo, nome, preco, relatorios_incluidos, descricao) VALUES
-  ('avulso', 'Plano Avulso', 104.95, 3, '3 relatórios com acesso completo sem vínculo'),
-  ('mensal_basico', 'Mensal Básico', 69.95, 3, '3 relatórios mensais com suporte básico'),
-  ('mensal_pro', 'Mensal Pró', 289.95, 25, '25 relatórios mensais com suporte prioritário'),
-  ('personalizado', 'Personalizado', 0.00, NULL, 'Plano sob medida para empresas e grupos');
+-- Inserir planos padrão apenas se não existirem
+INSERT INTO public.plans (tipo, nome, preco, relatorios_incluidos, descricao)
+SELECT 'avulso', 'Plano Avulso', 104.95, 3, '3 relatórios com acesso completo sem vínculo'
+WHERE NOT EXISTS (SELECT 1 FROM public.plans WHERE tipo = 'avulso');
+
+INSERT INTO public.plans (tipo, nome, preco, relatorios_incluidos, descricao)
+SELECT 'mensal_basico', 'Mensal Básico', 69.95, 3, '3 relatórios mensais com suporte básico'
+WHERE NOT EXISTS (SELECT 1 FROM public.plans WHERE tipo = 'mensal_basico');
+
+INSERT INTO public.plans (tipo, nome, preco, relatorios_incluidos, descricao)
+SELECT 'mensal_pro', 'Mensal Pró', 289.95, 25, '25 relatórios mensais com suporte prioritário'
+WHERE NOT EXISTS (SELECT 1 FROM public.plans WHERE tipo = 'mensal_pro');
+
+INSERT INTO public.plans (tipo, nome, preco, relatorios_incluidos, descricao)
+SELECT 'personalizado', 'Personalizado', 0.00, NULL, 'Plano sob medida para empresas e grupos'
+WHERE NOT EXISTS (SELECT 1 FROM public.plans WHERE tipo = 'personalizado');
 
 ALTER TABLE public.plans ENABLE ROW LEVEL SECURITY;
 

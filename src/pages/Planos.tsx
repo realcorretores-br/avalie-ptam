@@ -16,6 +16,7 @@ interface Plan {
   descricao: string;
   preco: number;
   relatorios_incluidos: number;
+  beneficios?: string[];
 }
 
 const Planos = () => {
@@ -221,23 +222,35 @@ const Planos = () => {
                         <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
                         <span>{plan.relatorios_incluidos} avaliações por mês</span>
                       </div>
-                      <div className="flex items-start gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span>Suporte por email</span>
-                      </div>
-                      <div className="flex items-start gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span>Atualizações gratuitas</span>
-                      </div>
-                      <div className="flex items-start gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span>Acesso a todos os recursos</span>
-                      </div>
-                      {plan.tipo === 'personalizado' && (
-                        <div className="flex items-start gap-2 text-sm">
-                          <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                          <span>Suporte prioritário</span>
-                        </div>
+
+                      {plan.beneficios && plan.beneficios.length > 0 ? (
+                        plan.beneficios.map((beneficio, index) => (
+                          <div key={index} className="flex items-start gap-2 text-sm">
+                            <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                            <span>{beneficio}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <>
+                          <div className="flex items-start gap-2 text-sm">
+                            <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                            <span>Suporte por email</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm">
+                            <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                            <span>Atualizações gratuitas</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm">
+                            <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                            <span>Acesso a todos os recursos</span>
+                          </div>
+                          {plan.tipo === 'personalizado' && (
+                            <div className="flex items-start gap-2 text-sm">
+                              <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                              <span>Suporte prioritário</span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 

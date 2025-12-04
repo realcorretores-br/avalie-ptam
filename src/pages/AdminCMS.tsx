@@ -83,7 +83,9 @@ const AdminCMS = () => {
       const normalizedData = (data as any[])?.map(plan => ({
         ...plan,
         descricao: plan.descricao ?? '',
-        beneficios: plan.beneficios ?? []
+        beneficios: plan.beneficios ?? [],
+        preco: plan.preco ?? 0,
+        relatorios_incluidos: plan.relatorios_incluidos ?? 0
       })) || [];
 
       setPlans(normalizedData);

@@ -306,9 +306,10 @@ serve(async (req: Request) => {
           status: 200,
         }
       );
-    }
 
-    throw new Error(`Gateway ${gateway.display_name} não suportado para esta operação`);
+    } else {
+      throw new Error(`Gateway ${gateway.display_name} não suportado para esta operação`);
+    }
   } catch (error) {
     console.error('Error in create-additional-reports-payment:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
