@@ -332,7 +332,10 @@ const Perfil = () => {
       toast.success('Perfil atualizado com sucesso!');
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      toast.error(`Erro ao atualizar perfil: ${error.message || error.details || 'Verifique os dados e tente novamente'}`);
+      // Detailed error logging for debugging
+      const errorDetails = `code: ${error.code}, message: ${error.message}, details: ${error.details || ''}, hint: ${error.hint || ''}`;
+      console.error('Update Profile Detailed Error:', errorDetails);
+      toast.error(`Erro ao atualizar perfil: ${error.message || 'Erro desconhecido'} (${error.code || 'sem código'}). Detalhes: ${error.details || ''}`);
     } finally {
       setSaving(false);
     }

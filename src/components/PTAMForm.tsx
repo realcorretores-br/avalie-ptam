@@ -60,18 +60,56 @@ export const PTAMForm = () => {
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
 
-  // Carregar dados de edição se fornecidos
+  // Persistence Key
+  const STORAGE_KEY = `ptam_form_draft_${user?.id || 'guest'}`;
+
+  // Load initial data: Edit Data > Local Storage > Default
   useEffect(() => {
     if (location.state?.editData) {
       setFormData(location.state.editData as PTAMData);
       setDraftId(location.state.avaliacaoId || null);
-      // Limpar o state após carregar
+      if (location.state.currentSection) {
+        setCurrentSection(location.state.currentSection);
+      }
+      // Clear state to avoid re-loading on refresh if state persists (optional, but keep per existing logic)
       window.history.replaceState({}, document.title);
-    } else if (!location.state?.skipTemplate) {
-      // Mostrar seletor de template apenas se não for edição
-      setShowTemplateSelector(true);
+    } else {
+      // Try to load from local storage
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.user_id === user?.id) { // Only load if same user
+            setFormData(parsed.formData);
+            setCurrentSection(parsed.currentSection || 0);
+            setDraftId(parsed.draftId || null);
+            toast.info('Rascunho local restaurado.');
+          }
+        } catch (e) {
+          console.error('Error parsing local storage draft', e);
+        }
+      }
+
+      if (!location.state?.skipTemplate && !localStorage.getItem(STORAGE_KEY)) {
+        setShowTemplateSelector(true);
+      }
     }
-  }, [location.state]);
+  }, [location.state, user?.id]); // specific dependency on user.id
+
+  // Save to Local Storage on Change
+  useEffect(() => {
+    if (formData && Object.keys(formData).length > 0) {
+      const stateToSave = {
+        formData,
+        currentSection,
+        draftId,
+        user_id: user?.id,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+    }
+  }, [formData, currentSection, draftId, user?.id]);
+
 
   // Auto-save: salvar automaticamente a cada alteração
   useEffect(() => {
@@ -266,6 +304,8 @@ export const PTAMForm = () => {
       if (updateError) throw updateError;
 
       setIsFinalized(true);
+      // Clear local storage on success
+      localStorage.removeItem(STORAGE_KEY);
       toast.success('Relatório finalizado com sucesso! 1 crédito foi descontado.');
     } catch (error) {
       console.error('Erro ao finalizar relatório:', error);
