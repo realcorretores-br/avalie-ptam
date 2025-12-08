@@ -11,12 +11,8 @@ import {
     PlusCircle,
     FileText,
     Shield,
-<<<<<<< HEAD
     AlertTriangle,
     History
-=======
-    AlertTriangle
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
 } from "lucide-react";
 import { useState } from "react";
 import { AddReportsDialog } from "@/components/user/AddReportsDialog";
@@ -285,7 +281,6 @@ export const Sidebar = ({ className }: SidebarProps) => {
                                 </span>
                             )}
                         </Link>
-<<<<<<< HEAD
                         <Link
                             to="/dashboard/admin/logs"
                             className={cn(
@@ -298,8 +293,6 @@ export const Sidebar = ({ className }: SidebarProps) => {
                             <History className="h-4 w-4" />
                             Logs de Auditoria
                         </Link>
-=======
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
                     </div>
                 )}
             </div>
@@ -326,7 +319,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
                     <LogOut className="h-4 w-4" />
                     Sair da conta
                 </Button>
-            </div>
+            </div >
             <AddReportsDialog
                 open={showAddReportsDialog}
                 onOpenChange={setShowAddReportsDialog}
@@ -334,6 +327,6 @@ export const Sidebar = ({ className }: SidebarProps) => {
                     refreshProfile();
                 }}
             />
-        </div>
+        </div >
     );
 };

@@ -57,10 +57,7 @@ const AdminPaymentGateways = () => {
   const availableGateways = [
     { value: 'mercadopago', label: 'Mercado Pago', tokenKey: 'MERCADO_PAGO_ACCESS_TOKEN' },
     { value: 'abacatepay', label: 'AbacatePay (PIX)', tokenKey: 'ABACATE_PAY_API_KEY' },
-<<<<<<< HEAD
     { value: 'asaas', label: 'Asaas', tokenKey: 'ASAAS_API_KEY' },
-=======
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
     { value: 'stripe', label: 'Stripe', tokenKey: 'STRIPE_SECRET_KEY' },
     { value: 'pagseguro', label: 'PagSeguro', tokenKey: 'PAGSEGURO_TOKEN' },
     { value: 'paypal', label: 'PayPal', tokenKey: 'PAYPAL_CLIENT_SECRET' },

@@ -27,10 +27,7 @@ import Admin from "./pages/Admin";
 import AdminCMS from "./pages/AdminCMS";
 import AdminPaymentGateways from "./pages/AdminPaymentGateways";
 import AdminTemplates from "./pages/AdminTemplates";
-<<<<<<< HEAD
 import AdminLogs from "./pages/admin/AdminLogs";
-=======
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
 import ContentManagement from "./pages/ContentManagement";
 import Metricas from "./pages/Metricas";
 import ReportarErro from "./pages/ReportarErro";
@@ -70,13 +67,10 @@ const App = () => (
                 <Route path="admin/cms" element={<AdminCMS />} />
                 <Route path="admin/gateways" element={<AdminPaymentGateways />} />
                 <Route path="admin/templates" element={<AdminTemplates />} />
-<<<<<<< HEAD
                 <Route path="admin/logs" element={<AdminLogs />} />
-=======
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
                 <Route path="admin/erros" element={<ErrosReportados />} />
                 <Route path="conteudo" element={<ContentManagement />} />
-              </Route>
+              </Route >
               <Route path="reportar-erro" element={<ReportarErro />} />
               <Route path="nova-avaliacao" element={<SubscriptionGuard><Index /></SubscriptionGuard>} />
               <Route path="avaliacoes" element={<AvaliacoesSalvas />} />
@@ -84,12 +78,12 @@ const App = () => (
               <Route path="avaliacoes-salvas" element={<Navigate to="/dashboard/avaliacoes" replace />} />
               <Route path="avaliacoes/:id" element={<VisualizarAvaliacao />} />
               <Route path="tutoriais" element={<VideosTutoriais />} />
-            </Route>
+            </Route >
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+          </Routes >
+        </AuthProvider >
+      </BrowserRouter >
+    </TooltipProvider >
   </QueryClientProvider >
 );
 

@@ -3,11 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useRole } from "./useRole";
 
-<<<<<<< HEAD
 export interface Subscription {
-=======
-interface Subscription {
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
   id: string;
   plan_id: string;
   status: string;
@@ -16,10 +12,7 @@ interface Subscription {
   data_expiracao: string;
   plans: {
     nome: string;
-<<<<<<< HEAD
     tipo: string;
-=======
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
   };
 }
 
@@ -63,17 +56,11 @@ export const useSubscription = () => {
       if (error) throw error;
 
       // For avulso plans with no expiration date, always consider active
-<<<<<<< HEAD
+      // For avulso plans with no expiration date, always consider active
       const isAvulso = (data as unknown as Subscription)?.plans?.tipo === 'avulso';
       const hasExpiration = data?.data_expiracao;
 
       setSubscription(data as unknown as Subscription);
-=======
-      const isAvulso = (data as any)?.plans?.tipo === 'avulso';
-      const hasExpiration = data?.data_expiracao;
-
-      setSubscription(data as any);
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
       setHasActiveSubscription(!!data && (isAvulso || !hasExpiration || new Date(data.data_expiracao) > new Date()));
     } catch (error) {
       console.error('Error fetching subscription:', error);
