@@ -81,9 +81,15 @@ export const PaymentModal = ({ open, onOpenChange, paymentUrl, pixCode, pixImage
         const isNewSubscriptionPayment = subscription?.payment_status === 'approved' &&
           (!initialPaymentId || (subscription.payment_id && subscription.payment_id !== initialPaymentId));
 
+<<<<<<< HEAD
         // Check if purchase payment is approved AND it's a NEW purchase
         const isNewPurchasePayment = purchase?.payment_status === 'approved' &&
           (!initialPurchaseId || (purchase.id && purchase.id !== initialPurchaseId));
+=======
+        // Check if purchase payment is approved AND it's the current or a new purchase
+        const isNewPurchasePayment = purchase?.payment_status === 'approved' &&
+          (purchase.id === initialPurchaseId || !initialPurchaseId || (purchase.id && purchase.id !== initialPurchaseId));
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
 
         if (isNewSubscriptionPayment || isNewPurchasePayment) {
           setPaymentApproved(true);
@@ -114,8 +120,18 @@ export const PaymentModal = ({ open, onOpenChange, paymentUrl, pixCode, pixImage
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+<<<<<<< HEAD
       <DialogContent className="max-w-4xl h-[90vh]">
 
+=======
+      <DialogContent className="max-w-4xl h-[90vh]" aria-describedby="payment-modal-description">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Pagamento</DialogTitle>
+        </DialogHeader>
+        <div id="payment-modal-description" className="sr-only">
+          Janela de pagamento para finalizar a compra do plano ou créditos.
+        </div>
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
 
         <div className="relative w-full h-full flex flex-col items-center justify-center">
           {paymentApproved && (

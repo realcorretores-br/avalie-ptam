@@ -141,24 +141,105 @@ serve(async (req) => {
             .eq('id', externalReference);
 
           // Add reports to active subscription
+<<<<<<< HEAD
           const { data: activeSubscription } = await supabaseClient
+=======
+          let { data: activeSubscription } = await supabaseClient
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
             .from('subscriptions')
             .select('*')
             .eq('user_id', purchase.user_id)
             .eq('status', 'active')
+<<<<<<< HEAD
             .single();
+=======
+            .maybeSingle();
+
+          // If no active subscription, try to find any subscription or create a new one (Avulso)
+          if (!activeSubscription) {
+            console.log('No active subscription found. Checking for any subscription...');
+            const { data: anySubscription } = await supabaseClient
+              .from('subscriptions')
+              .select('*')
+              .eq('user_id', purchase.user_id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (anySubscription) {
+              console.log('Found inactive subscription. Reactivating:', anySubscription.id);
+              // Reactivate existing subscription
+              const { data: reactivatedSub, error: reactivateError } = await supabaseClient
+                .from('subscriptions')
+                .update({
+                  status: 'active',
+                  // Extend expiration if needed, or keep as is? 
+                  // For additional credits, we usually set expiration to 30 days from purchase if it was expired
+                  data_expiracao: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                })
+                .eq('id', anySubscription.id)
+                .select()
+                .single();
+
+              if (!reactivateError) {
+                activeSubscription = reactivatedSub;
+              }
+            } else {
+              console.log('No subscription found. Creating new Avulso subscription...');
+              // Create new subscription with 'avulso' plan
+              const { data: avulsoPlan } = await supabaseClient
+                .from('plans')
+                .select('id')
+                .eq('tipo', 'avulso')
+                .maybeSingle();
+
+              if (avulsoPlan) {
+                const { data: newSub, error: createSubError } = await supabaseClient
+                  .from('subscriptions')
+                  .insert({
+                    user_id: purchase.user_id,
+                    plan_id: avulsoPlan.id,
+                    status: 'active',
+                    relatorios_disponiveis: 0, // Will add purchase.quantidade next
+                    relatorios_usados: 0,
+                    data_inicio: new Date().toISOString(),
+                    data_expiracao: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                    payment_status: 'approved' // Mark as approved since they paid for credits
+                  })
+                  .select()
+                  .single();
+
+                if (!createSubError) {
+                  activeSubscription = newSub;
+                } else {
+                  console.error('Error creating new subscription:', createSubError);
+                }
+              } else {
+                console.error('Avulso plan not found. Cannot create subscription.');
+              }
+            }
+          }
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
 
           if (activeSubscription) {
             await supabaseClient
               .from('subscriptions')
               .update({
+<<<<<<< HEAD
                 relatorios_disponiveis: activeSubscription.relatorios_disponiveis + purchase.quantidade,
+=======
+                relatorios_disponiveis: (activeSubscription.relatorios_disponiveis || 0) + purchase.quantidade,
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
               })
               .eq('id', activeSubscription.id);
 
             console.log(`Added ${purchase.quantidade} reports to subscription ${activeSubscription.id}`);
           } else {
+<<<<<<< HEAD
             console.error('No active subscription found for user:', purchase.user_id);
+=======
+            console.error('Failed to ensure active subscription for user:', purchase.user_id);
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
           }
         } else {
           // This is a regular plan subscription

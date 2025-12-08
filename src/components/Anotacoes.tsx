@@ -1,9 +1,17 @@
+<<<<<<< HEAD
 import { useState, useEffect, useCallback } from "react";
+=======
+import { useState, useEffect } from "react";
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
+<<<<<<< HEAD
 import { useSubscription, Subscription } from "@/hooks/useSubscription";
+=======
+import { useSubscription } from "@/hooks/useSubscription";
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { FileText, Lock, Loader2, Trash2, Plus } from "lucide-react";
@@ -22,18 +30,30 @@ export const Anotacoes = () => {
   const [saving, setSaving] = useState(false);
 
   // Check if plan is "Avulso" (blocked feature)
+<<<<<<< HEAD
   const isAvulso = subscription && subscription.plans?.tipo === 'avulso';
+=======
+  const isAvulso = subscription && (subscription as any).plans?.tipo === 'avulso';
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
   const isBlocked = isAvulso;
 
   useEffect(() => {
     if (user && !isBlocked) {
       fetchNotes();
     }
+<<<<<<< HEAD
   }, [user, isBlocked, fetchNotes]);
 
   const fetchNotes = useCallback(async () => {
     if (!user) return;
 
+=======
+  }, [user, isBlocked]);
+
+  const fetchNotes = async () => {
+    if (!user) return;
+    
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -50,7 +70,11 @@ export const Anotacoes = () => {
     } finally {
       setLoading(false);
     }
+<<<<<<< HEAD
   }, [user]);
+=======
+  };
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
 
   const handleSaveNote = async () => {
     if (!user || !newNote.trim()) return;
@@ -59,6 +83,7 @@ export const Anotacoes = () => {
     try {
       const { error } = await supabase
         .from('notes')
+<<<<<<< HEAD
         .insert({
           user_id: user.id,
           content: newNote.trim()
@@ -66,6 +91,15 @@ export const Anotacoes = () => {
 
       if (error) throw error;
 
+=======
+        .insert({ 
+          user_id: user.id, 
+          content: newNote.trim() 
+        });
+
+      if (error) throw error;
+      
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
       setNewNote("");
       await fetchNotes();
       toast.success('Anotação salva com sucesso!');
@@ -88,7 +122,11 @@ export const Anotacoes = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
       await fetchNotes();
       toast.success('Anotação excluída com sucesso!');
     } catch (error) {
@@ -107,7 +145,11 @@ export const Anotacoes = () => {
           <div className="space-y-2">
             <h3 className="text-xl font-semibold">Funcionalidade Bloqueada</h3>
             <p className="text-muted-foreground max-w-md">
+<<<<<<< HEAD
               As Anotações não estão disponíveis no plano Avulso.
+=======
+              As Anotações não estão disponíveis no plano Avulso. 
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
               Atualize seu plano para ter acesso a esta funcionalidade.
             </p>
           </div>
@@ -128,7 +170,11 @@ export const Anotacoes = () => {
             <FileText className="h-5 w-5 text-primary" />
             <h2 className="text-xl font-semibold">✏️ Nova Anotação</h2>
           </div>
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
           <div className="space-y-2">
             <Textarea
               placeholder="Digite sua anotação aqui..."
@@ -136,8 +182,13 @@ export const Anotacoes = () => {
               onChange={(e) => setNewNote(e.target.value)}
               className="min-h-[120px] resize-none border-primary/30 bg-background/50"
             />
+<<<<<<< HEAD
             <Button
               onClick={handleSaveNote}
+=======
+            <Button 
+              onClick={handleSaveNote} 
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
               disabled={!newNote.trim() || saving}
               className="w-full"
             >
@@ -182,12 +233,21 @@ export const Anotacoes = () => {
                 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700',
               ];
               const colorClass = colors[index % colors.length];
+<<<<<<< HEAD
 
               return (
                 <Card
                   key={note.id}
                   className={`p-4 shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-2 ${colorClass}`}
                   style={{
+=======
+              
+              return (
+                <Card 
+                  key={note.id} 
+                  className={`p-4 shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-2 ${colorClass}`}
+                  style={{ 
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
                     transform: `rotate(${(index % 2 === 0 ? 1 : -1) * 0.5}deg)`,
                   }}
                 >

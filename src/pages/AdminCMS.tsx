@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { useEffect, useState } from "react";
+=======
+import { useEffect, useState, useRef } from "react";
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -63,10 +67,20 @@ const AdminCMS = () => {
 
 
 
+<<<<<<< HEAD
   useEffect(() => {
     if (isAdmin) {
       fetchPlans();
       fetchLandingContent();
+=======
+  const hasFetched = useRef(false);
+
+  useEffect(() => {
+    if (isAdmin && !hasFetched.current) {
+      fetchPlans();
+      fetchLandingContent();
+      hasFetched.current = true;
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
     }
   }, [isAdmin]);
 
@@ -83,7 +97,13 @@ const AdminCMS = () => {
       const normalizedData = (data as any[])?.map(plan => ({
         ...plan,
         descricao: plan.descricao ?? '',
+<<<<<<< HEAD
         beneficios: plan.beneficios ?? []
+=======
+        beneficios: plan.beneficios ?? [],
+        preco: plan.preco ?? 0,
+        relatorios_incluidos: plan.relatorios_incluidos ?? 0
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
       })) || [];
 
       setPlans(normalizedData);

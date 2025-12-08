@@ -5,7 +5,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface ConfirmacaoCadastroProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+<<<<<<< HEAD
   formData: Record<string, any>;
+=======
+  formData: any;
+>>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
   estrangeiro: boolean;
   tipoAvaliador: string;
   onConfirm: () => void;
