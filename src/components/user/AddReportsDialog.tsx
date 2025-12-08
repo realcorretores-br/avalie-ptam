@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Loader2, Plus, Minus } from "lucide-react";
 import { PaymentModal } from "@/components/PaymentModal";
+import { maskCPF } from "@/lib/masks";
 
 interface AddReportsDialogProps {
   open: boolean;
@@ -22,13 +23,14 @@ interface AddReportsDialogProps {
 }
 
 export const AddReportsDialog = ({ open, onOpenChange, onSuccess }: AddReportsDialogProps) => {
-  const { user } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState("");
   const [pixCode, setPixCode] = useState("");
   const [pixImage, setPixImage] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [cpf, setCpf] = useState("");
 
   const [pricePerReport, setPricePerReport] = useState(34.99);
   const total = quantity * pricePerReport;
@@ -48,8 +50,11 @@ export const AddReportsDialog = ({ open, onOpenChange, onSuccess }: AddReportsDi
 
     if (open) {
       fetchPrice();
+      if (profile?.cpf) {
+        setCpf(profile.cpf);
+      }
     }
-  }, [open]);
+  }, [open, profile]);
 
   const handleQuantityChange = (value: number) => {
     if (value >= 1 && value <= 100) {
@@ -68,8 +73,30 @@ export const AddReportsDialog = ({ open, onOpenChange, onSuccess }: AddReportsDi
       return;
     }
 
+    // Validate CPF if missing from profile
+    if (!profile?.cpf) {
+      if (!cpf || cpf.length < 14) {
+        toast.error("CPF é obrigatório para o pagamento");
+        return;
+      }
+    }
+
     setLoading(true);
     try {
+      // If profile didn't have CPF, update it now
+      if (!profile?.cpf && cpf) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ cpf: cpf })
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.error('Error updating profile with CPF:', updateError);
+          throw new Error("Erro ao salvar CPF: " + (updateError.message || updateError.details));
+        }
+        await refreshProfile();
+      }
+
       // Create purchase record
       const { data: purchase, error: purchaseError } = await supabase
         .from('additional_reports_purchases')
@@ -184,6 +211,20 @@ export const AddReportsDialog = ({ open, onOpenChange, onSuccess }: AddReportsDi
                 Máximo: 100 relatórios por compra
               </p>
             </div>
+
+            {/* CPF Input if missing */}
+            {!profile?.cpf && (
+              <div className="space-y-2">
+                <Label htmlFor="cpf">CPF (Necessário para pagamento)</Label>
+                <Input
+                  id="cpf"
+                  value={cpf}
+                  onChange={(e) => setCpf(maskCPF(e.target.value))}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <div className="flex justify-between text-sm">

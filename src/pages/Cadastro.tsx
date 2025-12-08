@@ -252,7 +252,7 @@ const Cadastro = () => {
           creci: tipoAvaliador === 'corretor' ? validatedData.creci : null,
           cau: tipoAvaliador === 'arquiteto' ? validatedData.cau : null,
           crea: tipoAvaliador === 'engenheiro' ? validatedData.crea : null,
-          cnai: validatedData.cnai || null,
+          cnae: validatedData.cnai || null,
           cnpj: validatedData.cnpj || null,
         })
         .eq('id', authData.user.id);

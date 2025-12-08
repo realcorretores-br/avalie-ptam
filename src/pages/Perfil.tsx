@@ -316,7 +316,7 @@ const Perfil = () => {
           cidade: formData.cidade,
           estado: formData.estado,
           cep: formData.cep,
-          tipo_avaliador: tipoAvaliador,
+          tipo_avaliador: tipoAvaliador || null,
           creci: tipoAvaliador === 'corretor' ? formData.creci : null,
           cau: tipoAvaliador === 'arquiteto' ? formData.cau : null,
           crea: tipoAvaliador === 'engenheiro' ? formData.crea : null,
@@ -330,9 +330,9 @@ const Perfil = () => {
 
       await refreshProfile();
       toast.success('Perfil atualizado com sucesso!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      toast.error('Erro ao atualizar perfil');
+      toast.error(`Erro ao atualizar perfil: ${error.message || error.details || 'Verifique os dados e tente novamente'}`);
     } finally {
       setSaving(false);
     }

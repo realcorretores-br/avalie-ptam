@@ -306,16 +306,115 @@ serve(async (req: Request) => {
           status: 200,
         }
       );
-<<<<<<< HEAD
-    }
+    } else if (gateway.name === 'asaas') {
+      const apiKey = gateway.config.access_token_key;
+      if (!apiKey) {
+        throw new Error(`Secret ${gateway.config.access_token_key} não configurado`);
+      }
 
-    throw new Error(`Gateway ${gateway.display_name} não suportado para esta operação`);
-=======
+      console.log('Creating Asaas payment for additional reports...');
+
+      // Validate CPF
+      if (!profile.cpf) {
+        throw new Error('CPF é obrigatório para pagamentos. Por favor, atualize seu perfil.');
+      }
+
+      // 1. Create or Get Customer
+      const customerPayload = {
+        name: profile.nome_completo,
+        email: profile.email,
+        cpfCnpj: profile.cpf.replace(/\D/g, ''),
+        mobilePhone: profile.telefone ? profile.telefone.replace(/\D/g, '') : undefined,
+        externalReference: userId
+      };
+
+      let customerId;
+      const searchResponse = await fetch(`https://sandbox.asaas.com/api/v3/customers?email=${profile.email}`, {
+        headers: { 'access_token': apiKey }
+      });
+
+      const searchData = await searchResponse.json();
+      if (searchData.data && searchData.data.length > 0) {
+        customerId = searchData.data[0].id;
+      } else {
+        const createCustomerResponse = await fetch('https://sandbox.asaas.com/api/v3/customers', {
+          method: 'POST',
+          headers: {
+            'access_token': apiKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(customerPayload)
+        });
+        const customerData = await createCustomerResponse.json();
+        if (!createCustomerResponse.ok) {
+          throw new Error('Erro ao criar cliente no Asaas: ' + JSON.stringify(customerData));
+        }
+        customerId = customerData.id;
+      }
+
+      // 2. Create Payment
+      const paymentValue = Number(totalPrice);
+
+      // Asaas minimum value check
+      if (paymentValue < 5) {
+        throw new Error('O valor mínimo para pagamentos via Asaas é de R$ 5,00. Por favor, aumente a quantidade de créditos.');
+      }
+
+      const paymentPayload = {
+        customer: customerId,
+        billingType: 'UNDEFINED',
+        value: paymentValue,
+        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        description: `Compra de ${quantity} laudos adicionais`,
+        externalReference: purchaseId,
+        callback: {
+          successUrl: returnUrl,
+          autoRedirect: true
+        }
+      };
+
+      const paymentResponse = await fetch('https://sandbox.asaas.com/api/v3/payments', {
+        method: 'POST',
+        headers: {
+          'access_token': apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(paymentPayload)
+      });
+
+      const paymentData = await paymentResponse.json();
+
+      if (!paymentResponse.ok) {
+        throw new Error('Erro ao criar cobrança no Asaas: ' + JSON.stringify(paymentData));
+      }
+
+      // Update purchase with payment info
+      const { error: updateError } = await supabase
+        .from('additional_reports_purchases')
+        .update({
+          payment_id: paymentData.id,
+          payment_status: 'pending',
+        })
+        .eq('id', purchaseId);
+
+      if (updateError) {
+        console.error('Error updating purchase:', updateError);
+      }
+
+      return new Response(
+        JSON.stringify({
+          init_point: paymentData.invoiceUrl,
+          payment_id: paymentData.id,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
 
     } else {
       throw new Error(`Gateway ${gateway.display_name} não suportado para esta operação`);
     }
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
   } catch (error) {
     console.error('Error in create-additional-reports-payment:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
