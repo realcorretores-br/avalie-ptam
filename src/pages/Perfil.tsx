@@ -24,6 +24,7 @@ import { AddReportsDialog } from "@/components/user/AddReportsDialog";
 import { ThemeColorPicker } from "@/components/ThemeColorPicker";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { maskCPF, maskRG, maskCNPJ } from "@/lib/masks";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 interface PaymentHistory {
   id: string;
@@ -46,6 +47,7 @@ type Tab = 'perfil' | 'assinatura' | 'pagamentos' | 'anotacoes';
 const Perfil = () => {
   const { user, profile, refreshProfile } = useAuth();
   const { subscription, refetch: refetchSubscription } = useSubscription();
+  const { settings } = useSystemSettings();
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -385,42 +387,50 @@ const Perfil = () => {
 
           {/* Navigation Tabs */}
           <div className="flex space-x-2 border-b overflow-x-auto pb-1">
-            <Button
-              variant={activeTab === 'perfil' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('perfil')}
-              className="gap-2"
-            >
-              <User className="h-4 w-4" />
-              Perfil
-            </Button>
-            <Button
-              variant={activeTab === 'assinatura' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('assinatura')}
-              className="gap-2"
-            >
-              <CreditCard className="h-4 w-4" />
-              Assinatura
-            </Button>
-            <Button
-              variant={activeTab === 'pagamentos' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('pagamentos')}
-              className="gap-2"
-            >
-              <Receipt className="h-4 w-4" />
-              Histórico de Pagamento
-            </Button>
-            <Button
-              variant={activeTab === 'anotacoes' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('anotacoes')}
-              className="gap-2"
-            >
-              <Pencil className="h-4 w-4" />
-              Anotações
-            </Button>
+            {settings.enable_profile && (
+              <Button
+                variant={activeTab === 'perfil' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('perfil')}
+                className="gap-2"
+              >
+                <User className="h-4 w-4" />
+                Perfil
+              </Button>
+            )}
+            {settings.enable_subscription && (
+              <Button
+                variant={activeTab === 'assinatura' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('assinatura')}
+                className="gap-2"
+              >
+                <CreditCard className="h-4 w-4" />
+                Assinatura
+              </Button>
+            )}
+            {settings.enable_payment_history && (
+              <Button
+                variant={activeTab === 'pagamentos' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('pagamentos')}
+                className="gap-2"
+              >
+                <Receipt className="h-4 w-4" />
+                Histórico de Pagamento
+              </Button>
+            )}
+            {settings.enable_notes && (
+              <Button
+                variant={activeTab === 'anotacoes' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('anotacoes')}
+                className="gap-2"
+              >
+                <Pencil className="h-4 w-4" />
+                Anotações
+              </Button>
+            )}
           </div>
 
           {/* Perfil Tab */}
-          {activeTab === 'perfil' && (
+          {activeTab === 'perfil' && settings.enable_profile && (
             <Card className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <User className="h-5 w-5 text-primary" />
@@ -695,7 +705,7 @@ const Perfil = () => {
           )}
 
           {/* Assinatura Tab */}
-          {activeTab === 'assinatura' && (
+          {activeTab === 'assinatura' && settings.enable_subscription && (
             <Card className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <CreditCard className="h-5 w-5 text-primary" />
@@ -774,7 +784,7 @@ const Perfil = () => {
           )}
 
           {/* Histórico de Pagamentos Tab */}
-          {activeTab === 'pagamentos' && (
+          {activeTab === 'pagamentos' && settings.enable_payment_history && (
             <Card className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <Receipt className="h-5 w-5 text-primary" />
@@ -843,7 +853,7 @@ const Perfil = () => {
           )}
 
           {/* Anotações Tab */}
-          {activeTab === 'anotacoes' && (
+          {activeTab === 'anotacoes' && settings.enable_notes && (
             <Anotacoes />
           )}
 

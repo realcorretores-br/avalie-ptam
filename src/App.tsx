@@ -32,6 +32,7 @@ import ContentManagement from "./pages/ContentManagement";
 import Metricas from "./pages/Metricas";
 import ReportarErro from "./pages/ReportarErro";
 import ErrosReportados from "./pages/ErrosReportados";
+import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,6 +70,7 @@ const App = () => (
                 <Route path="admin/templates" element={<AdminTemplates />} />
                 <Route path="admin/logs" element={<AdminLogs />} />
                 <Route path="admin/erros" element={<ErrosReportados />} />
+                <Route path="admin/settings" element={<AdminSettings />} />
                 <Route path="conteudo" element={<ContentManagement />} />
               </Route >
               <Route path="reportar-erro" element={<ReportarErro />} />

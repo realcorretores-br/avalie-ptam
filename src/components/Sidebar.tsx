@@ -12,7 +12,8 @@ import {
     FileText,
     Shield,
     AlertTriangle,
-    History
+    History,
+    Settings
 } from "lucide-react";
 import { useState } from "react";
 import { AddReportsDialog } from "@/components/user/AddReportsDialog";
@@ -21,6 +22,7 @@ import { CreditDisplay } from "@/components/CreditDisplay";
 import { cn } from "@/lib/utils";
 import { useRole } from "@/hooks/useRole";
 import { supabase } from "@/integrations/supabase/client";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 interface SidebarProps {
     className?: string;
@@ -84,6 +86,16 @@ export const Sidebar = ({ className }: SidebarProps) => {
         return location.pathname === path && !currentTab;
     };
 
+    const { settings } = useSystemSettings();
+
+    // Map content of profile items to settings keys
+    const profileItemVisibility = {
+        "Perfil": settings.enable_profile,
+        "Assinatura": settings.enable_subscription,
+        "Histórico de Pagamento": settings.enable_payment_history,
+        "Anotações": settings.enable_notes
+    };
+
     const profileItems = [
         {
             label: "Perfil",
@@ -109,7 +121,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
             path: "/dashboard/perfil",
             tab: "anotacoes"
         }
-    ];
+    ].filter(item => profileItemVisibility[item.label as keyof typeof profileItemVisibility]);
 
     return (
         <div className={cn("h-screen w-64 border-r bg-background flex-col fixed left-0 top-0 z-50 hidden md:flex", className)}>
@@ -176,27 +188,29 @@ export const Sidebar = ({ className }: SidebarProps) => {
                     </Link>
                 </div>
 
-                {/* Profile Section */}
-                <div className="space-y-1">
-                    <h4 className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                        Meu Perfil
-                    </h4>
-                    {profileItems.map((item) => (
-                        <Link
-                            key={item.label}
-                            to={`${item.path}?tab=${item.tab}`}
-                            className={cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                                isActive(item.path, item.tab)
-                                    ? "bg-primary/10 text-primary"
-                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                            )}
-                        >
-                            <item.icon className="h-4 w-4" />
-                            {item.label}
-                        </Link>
-                    ))}
-                </div>
+                {/* Profile Section - Only show if at least one item is enabled */}
+                {profileItems.length > 0 && (
+                    <div className="space-y-1">
+                        <h4 className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                            Meu Perfil
+                        </h4>
+                        {profileItems.map((item) => (
+                            <Link
+                                key={item.label}
+                                to={`${item.path}?tab=${item.tab}`}
+                                className={cn(
+                                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                                    isActive(item.path, item.tab)
+                                        ? "bg-primary/10 text-primary"
+                                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                )}
+                            >
+                                <item.icon className="h-4 w-4" />
+                                {item.label}
+                            </Link>
+                        ))}
+                    </div>
+                )}
 
                 {/* Admin Menu */}
                 {isAdmin && (
@@ -215,6 +229,18 @@ export const Sidebar = ({ className }: SidebarProps) => {
                         >
                             <Shield className="h-4 w-4" />
                             Painel Admin
+                        </Link>
+                        <Link
+                            to="/dashboard/admin/settings"
+                            className={cn(
+                                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                                isActive("/dashboard/admin/settings")
+                                    ? "bg-primary/10 text-primary"
+                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                        >
+                            <Settings className="h-4 w-4" />
+                            Configurações Globais
                         </Link>
                         <Link
                             to="/dashboard/conteudo"
