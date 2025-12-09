@@ -36,7 +36,6 @@ const AdminSettings = () => {
                     enable_profile: localSettings.enable_profile,
                     enable_subscription: localSettings.enable_subscription,
                     enable_payment_history: localSettings.enable_payment_history,
-                    enable_payment_history: localSettings.enable_payment_history,
                     enable_notes: localSettings.enable_notes,
                     site_logo: localSettings.site_logo,
                     site_favicon: localSettings.site_favicon
