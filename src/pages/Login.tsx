@@ -10,6 +10,7 @@ import { Building2, Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import { z } from "zod";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 const LoginSchema = z.object({
   email: z.string().trim().email('Email inválido').max(255, 'Email muito longo'),
@@ -23,6 +24,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { settings } = useSystemSettings();
 
   useEffect(() => {
     if (user) {
@@ -75,8 +77,14 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
       <Card className="w-full max-w-md p-8">
         <div className="flex items-center justify-center gap-2 mb-8">
-          <Building2 className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold">PTAM</span>
+          {settings.site_logo ? (
+            <img src={settings.site_logo} alt="Logo" className="h-12 w-auto object-contain" />
+          ) : (
+            <>
+              <Building2 className="h-8 w-8 text-primary" />
+              <span className="text-2xl font-bold">PTAM</span>
+            </>
+          )}
         </div>
 
         <h1 className="text-2xl font-bold text-center mb-2">Bem-vindo de volta</h1>

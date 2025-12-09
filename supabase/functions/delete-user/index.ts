@@ -15,7 +15,7 @@ serve(async (req) => {
 
     try {
         // 1. Check for Service Role Key
-        const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY');
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SERVICE_ROLE_KEY');
         if (!serviceRoleKey) {
             console.error('Missing SERVICE_ROLE_KEY');
             return new Response(

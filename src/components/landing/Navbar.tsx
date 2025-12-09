@@ -2,9 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Building2, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 export const Navbar = () => {
     const navigate = useNavigate();
+    const { settings } = useSystemSettings();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const scrollToSection = (id: string) => {
@@ -26,13 +28,23 @@ export const Navbar = () => {
             <div className="container flex h-20 items-center justify-between">
                 {/* Brand */}
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-                    <div className="bg-primary/10 p-2 rounded-xl">
-                        <Building2 className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-xl font-bold tracking-tight leading-none">Avalie Certo</span>
-                        <span className="text-xs text-muted-foreground font-medium">PTAM – Plataforma de Avaliação</span>
-                    </div>
+                    {settings.site_logo ? (
+                        <img
+                            src={settings.site_logo}
+                            alt="Logo"
+                            className="h-12 w-auto object-contain"
+                        />
+                    ) : (
+                        <>
+                            <div className="bg-primary/10 p-2 rounded-xl">
+                                <Building2 className="h-6 w-6 text-primary" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-xl font-bold tracking-tight leading-none">Avalie Certo</span>
+                                <span className="text-xs text-muted-foreground font-medium">PTAM – Plataforma de Avaliação</span>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Desktop Nav */}

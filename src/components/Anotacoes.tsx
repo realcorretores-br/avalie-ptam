@@ -25,12 +25,6 @@ export const Anotacoes = () => {
   const isAvulso = subscription && subscription.plans?.tipo === 'avulso';
   const isBlocked = isAvulso;
 
-  useEffect(() => {
-    if (user && !isBlocked) {
-      fetchNotes();
-    }
-  }, [user, isBlocked, fetchNotes]);
-
   const fetchNotes = useCallback(async () => {
     if (!user) return;
 
@@ -51,6 +45,12 @@ export const Anotacoes = () => {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && !isBlocked) {
+      fetchNotes();
+    }
+  }, [user, isBlocked, fetchNotes]);
 
   const handleSaveNote = async () => {
     if (!user || !newNote.trim()) return;

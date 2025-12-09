@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useRole } from "@/hooks/useRole";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, CreditCard, TrendingUp, Download, Send, Edit, UserPlus, UserMinus, Ban, Unlock, Trash2, DollarSign, Plus, FileText } from "lucide-react";
+import { Users, CreditCard, TrendingUp, Download, Send, Edit, UserPlus, UserMinus, Ban, Unlock, Trash2, DollarSign, Plus, FileText, Gift } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { EditUserDialog } from "@/components/admin/EditUserDialog";
@@ -18,6 +18,7 @@ import { AddSubscriptionDialog } from "@/components/admin/AddSubscriptionDialog"
 import { BlockUserDialog } from "@/components/admin/BlockUserDialog";
 import { UnblockUserDialog } from "@/components/admin/UnblockUserDialog";
 import { DeleteUserDialog } from "@/components/admin/DeleteUserDialog";
+import { GrantCreditDialog } from "@/components/admin/GrantCreditDialog";
 import { exportToExcel } from "@/lib/excelExport";
 import { LineChart, Line, BarChart as RechartsBar, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import {
@@ -153,6 +154,10 @@ const Admin = () => {
   const [blockUserDialog, setBlockUserDialog] = useState({ open: false, userId: '', userName: '' });
   const [unblockUserDialog, setUnblockUserDialog] = useState({ open: false, userId: '', userName: '' });
   const [deleteUserDialog, setDeleteUserDialog] = useState({ open: false, userId: '', userName: '' });
+  const [grantCreditDialog, setGrantCreditDialog] = useState({ open: false, userId: '', userName: '' });
+
+  const [filterName, setFilterName] = useState('');
+  const [filterEmail, setFilterEmail] = useState('');
 
 
 
@@ -471,7 +476,9 @@ const Admin = () => {
   };
 
   const filteredUsers = users.filter(user =>
-    !cidadeFilter || user.cidade?.toLowerCase().includes(cidadeFilter.toLowerCase())
+    (!cidadeFilter || user.cidade?.toLowerCase().includes(cidadeFilter.toLowerCase())) &&
+    (!filterName || user.nome_completo?.toLowerCase().includes(filterName.toLowerCase())) &&
+    (!filterEmail || user.email?.toLowerCase().includes(filterEmail.toLowerCase()))
   );
 
   // Helper for Category Visibility
@@ -721,12 +728,21 @@ const Admin = () => {
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-4">
             <Card>
-              <div className="p-4 border-b">
+              <div className="p-4 border-b grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  placeholder="Filtrar por nome..."
+                  value={filterName}
+                  onChange={(e) => setFilterName(e.target.value)}
+                />
+                <Input
+                  placeholder="Filtrar por email..."
+                  value={filterEmail}
+                  onChange={(e) => setFilterEmail(e.target.value)}
+                />
                 <Input
                   placeholder="Filtrar por cidade..."
                   value={cidadeFilter}
                   onChange={(e) => setCidadeFilter(e.target.value)}
-                  className="max-w-sm"
                 />
               </div>
               <Table>
@@ -838,6 +854,65 @@ const Admin = () => {
                             }}
                           >
                             {user.isAdmin ? <UserMinus className="h-3 w-3" /> : <UserPlus className="h-3 w-3" />}
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
+                            title="Conceder Bônus"
+                            onClick={() => setGrantCreditDialog({
+                              open: true,
+                              userId: user.id,
+                              userName: user.nome_completo
+                            })}
+                          >
+                            <Gift className="h-3 w-3" />
+                          </Button>
+
+                          {/* Block/Unblock Action */}
+                          {isUserBlocked(user.bloqueado_ate) ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="bg-orange-50 text-orange-600 hover:bg-orange-100 border-orange-200"
+                              title="Desbloquear Usuário"
+                              onClick={() => setUnblockUserDialog({
+                                open: true,
+                                userId: user.id,
+                                userName: user.nome_completo
+                              })}
+                            >
+                              <Unlock className="h-3 w-3" />
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200"
+                              title="Bloquear Usuário"
+                              onClick={() => setBlockUserDialog({
+                                open: true,
+                                userId: user.id,
+                                userName: user.nome_completo
+                              })}
+                            >
+                              <Ban className="h-3 w-3" />
+                            </Button>
+                          )}
+
+                          {/* Delete Action */}
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            title="Excluir Usuário"
+                            onClick={() => setDeleteUserDialog({
+                              open: true,
+                              userId: user.id,
+                              userName: user.nome_completo
+                            })}
+                          >
+                            <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
                       </TableCell>
@@ -1081,7 +1156,15 @@ const Admin = () => {
         userName={deleteUserDialog.userName}
         onSuccess={fetchData}
       />
-    </AdminLayout>
+
+      <GrantCreditDialog
+        open={grantCreditDialog.open}
+        onOpenChange={(open) => setGrantCreditDialog({ ...grantCreditDialog, open })}
+        userId={grantCreditDialog.userId}
+        userName={grantCreditDialog.userName}
+        onSuccess={fetchData}
+      />
+    </AdminLayout >
   );
 };
 

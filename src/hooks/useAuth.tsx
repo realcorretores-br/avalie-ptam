@@ -33,6 +33,7 @@ interface Profile {
   updated_at?: string;
   theme_color?: string;
   role?: 'user' | 'admin' | 'editor' | 'moderator';
+  creditos_pendentes?: number;
 }
 
 interface AuthContextType {

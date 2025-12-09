@@ -37,7 +37,7 @@ interface Avaliacao {
 
 const AvaliacoesSalvas = () => {
   const { user } = useAuth();
-  const { subscription } = useSubscription();
+  const { subscription, loading: subscriptionLoading } = useSubscription();
   const { isAdmin } = useRole();
   const navigate = useNavigate();
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
@@ -45,20 +45,39 @@ const AvaliacoesSalvas = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [avaliacaoToDelete, setAvaliacaoToDelete] = useState<string | null>(null);
 
+  // Check if user effectively has a recurring plan (Avulso doesn't count as "Active Plan" for UX messages)
+  const hasRecurringPlan = subscription &&
+    (subscription.status === 'active' || subscription.status === 'trialing') &&
+    (subscription.plans as any)?.tipo !== 'avulso';
+
   // Determinar limite de visualizações baseado no plano
   const getVisualizationLimit = () => {
     // Admin tem acesso ilimitado
     if (isAdmin) return Infinity;
 
-    if (!subscription) return 0;
+    if (!subscription || (subscription.status !== 'active' && subscription.status !== 'trialing')) {
+      return 0;
+    }
 
-    const reportCount = subscription.relatorios_disponiveis;
+    // Avulso plans should not have visualization limits (pay-per-use)
+    if ((subscription.plans as any)?.tipo === 'avulso') {
+      return Infinity;
+    }
 
-    // Definir limites: Avulso (1-5): 1, Básico (6-10): 3, Avançado (11+): 25
+    // Se tivermos a informação direta do plano, usamos ela
+    if ((subscription.plans as any)?.relatorios_incluidos) {
+      return (subscription.plans as any).relatorios_incluidos;
+    }
+
+    const reportCount = subscription.relatorios_disponiveis || 0;
+
+    // Fallback logic
     if (reportCount <= 5) return 1;
     if (reportCount <= 10) return 3;
     return 25;
   };
+
+  const visualizationLimit = getVisualizationLimit();
 
   useEffect(() => {
     if (!user) {
@@ -171,11 +190,13 @@ const AvaliacoesSalvas = () => {
     }
   };
 
-  const visualizationLimit = getVisualizationLimit();
-
   // Filter and Sort
-  // Filter and Sort removed
-  const filteredAvaliacoes = avaliacoes;
+  let filteredAvaliacoes = avaliacoes;
+
+  // Restriction: Users without a recurring plan cannot see Drafts
+  if (!isAdmin && !hasRecurringPlan) {
+    filteredAvaliacoes = filteredAvaliacoes.filter(a => a.status !== 'rascunho');
+  }
 
   const visibleAvaliacoes = isAdmin ? filteredAvaliacoes : filteredAvaliacoes.slice(0, visualizationLimit);
   const hasMore = !isAdmin && filteredAvaliacoes.length > visualizationLimit;
@@ -189,11 +210,26 @@ const AvaliacoesSalvas = () => {
       <div className="container py-12">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl font-bold mb-2">Avaliações Salvas</h1>
-          {!isAdmin && subscription && (
-            <p className="text-muted-foreground mb-8">
-              Seu plano permite visualizar até {visualizationLimit} relatórios
-            </p>
+
+          {!isAdmin && !subscriptionLoading && (
+            <div className="mb-8">
+              {!hasRecurringPlan ? (
+                <Alert variant="destructive" className="bg-destructive/10 border-destructive/50 text-destructive dark:text-red-400">
+                  <AlertCircle className="h-5 w-5" />
+                  <AlertDescription className="ml-2 font-medium">
+                    Você não possui um plano ativo.
+                    <Link to="/dashboard/planos" className="underline ml-1">Assine um plano</Link>
+                    para salvar rascunhos e visualizar mais relatórios.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <p className="text-muted-foreground">
+                  Seu plano ({subscription?.plans?.nome || 'Ativo'}) permite visualizar até <strong>{visualizationLimit}</strong> relatórios
+                </p>
+              )}
+            </div>
           )}
+
           {isAdmin && (
             <p className="text-muted-foreground mb-8">
               Acesso administrativo: visualização ilimitada

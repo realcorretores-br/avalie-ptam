@@ -7,6 +7,8 @@ export interface SystemSettings {
     enable_subscription: boolean;
     enable_payment_history: boolean;
     enable_notes: boolean;
+    site_logo?: string;
+    site_favicon?: string;
 }
 
 const DEFAULT_SETTINGS: SystemSettings = {
@@ -15,6 +17,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
     enable_subscription: true,
     enable_payment_history: true,
     enable_notes: true,
+    site_logo: undefined,
+    site_favicon: undefined
 };
 
 export const useSystemSettings = () => {

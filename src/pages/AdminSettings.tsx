@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import { Loader2, Save, Settings } from "lucide-react";
 
 const AdminSettings = () => {
@@ -35,7 +36,10 @@ const AdminSettings = () => {
                     enable_profile: localSettings.enable_profile,
                     enable_subscription: localSettings.enable_subscription,
                     enable_payment_history: localSettings.enable_payment_history,
-                    enable_notes: localSettings.enable_notes
+                    enable_payment_history: localSettings.enable_payment_history,
+                    enable_notes: localSettings.enable_notes,
+                    site_logo: localSettings.site_logo,
+                    site_favicon: localSettings.site_favicon
                 });
 
             if (error) throw error;
@@ -80,6 +84,118 @@ const AdminSettings = () => {
                 </div>
 
                 <div className="grid gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Aparência do Sistema</CardTitle>
+                            <CardDescription>
+                                Personalize a identidade visual do sistema.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="flex flex-col space-y-3">
+                                <Label htmlFor="site_logo">Logotipo do Sistema</Label>
+                                <div className="flex items-center gap-4">
+                                    {localSettings.site_logo && (
+                                        <div className="bg-muted p-2 rounded-lg border">
+                                            <img
+                                                src={localSettings.site_logo}
+                                                alt="Logo Preview"
+                                                className="h-12 w-auto object-contain"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="grid w-full max-w-sm items-center gap-1.5">
+                                        <Input
+                                            id="site_logo"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+
+                                                const toastId = toast.loading('Enviando logo...');
+                                                try {
+                                                    const fileExt = file.name.split('.').pop();
+                                                    const fileName = `site-logo-${Date.now()}.${fileExt}`;
+
+                                                    const { error: uploadError } = await supabase.storage
+                                                        .from('site-assets')
+                                                        .upload(fileName, file, { upsert: true });
+
+                                                    if (uploadError) throw uploadError;
+
+                                                    const { data: { publicUrl } } = supabase.storage
+                                                        .from('site-assets')
+                                                        .getPublicUrl(fileName);
+
+                                                    setLocalSettings(prev => ({ ...prev, site_logo: publicUrl }));
+                                                    toast.success('Logo enviado com sucesso!', { id: toastId });
+                                                } catch (error: any) {
+                                                    console.error(error);
+                                                    toast.error('Erro ao enviar logo', { id: toastId });
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Recomendado: Imagem PNG ou SVG com fundo transparente. Altura máxima de 40px.
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col space-y-3">
+                                <Label htmlFor="site_favicon">Favicon do Sistema</Label>
+                                <div className="flex items-center gap-4">
+                                    {localSettings.site_favicon && (
+                                        <div className="bg-muted p-2 rounded-lg border w-12 h-12 flex items-center justify-center">
+                                            <img
+                                                src={localSettings.site_favicon}
+                                                alt="Favicon Preview"
+                                                className="h-8 w-8 object-contain"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="grid w-full max-w-sm items-center gap-1.5">
+                                        <Input
+                                            id="site_favicon"
+                                            type="file"
+                                            accept="image/png,image/x-icon,image/svg+xml"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+
+                                                const toastId = toast.loading('Enviando favicon...');
+                                                try {
+                                                    const fileExt = file.name.split('.').pop();
+                                                    const fileName = `site-favicon-${Date.now()}.${fileExt}`;
+
+                                                    const { error: uploadError } = await supabase.storage
+                                                        .from('site-assets')
+                                                        .upload(fileName, file, { upsert: true });
+
+                                                    if (uploadError) throw uploadError;
+
+                                                    const { data: { publicUrl } } = supabase.storage
+                                                        .from('site-assets')
+                                                        .getPublicUrl(fileName);
+
+                                                    setLocalSettings(prev => ({ ...prev, site_favicon: publicUrl }));
+                                                    toast.success('Favicon enviado com sucesso!', { id: toastId });
+                                                } catch (error: any) {
+                                                    console.error(error);
+                                                    toast.error('Erro ao enviar favicon', { id: toastId });
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Recomendado: .ico, .png ou .svg (32x32px).
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     <Card>
                         <CardHeader>
                             <CardTitle>Módulos do Perfil do Usuário</CardTitle>

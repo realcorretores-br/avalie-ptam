@@ -16,8 +16,10 @@ import {
   CreditCard,
   Shield,
   Edit,
-  Settings
+  Settings,
+  Gift
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { AddReportsDialog } from "@/components/user/AddReportsDialog";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -186,6 +188,52 @@ const Dashboard = () => {
                     >
                       <Plus className="h-4 w-4" />
                       Adicionar Créditos Avulsos
+                    </Button>
+                  )}
+
+                  {/* Bonus Redemption */}
+                  {!isAdmin && (profile as any)?.creditos_pendentes > 0 && (
+                    <Button
+                      className="w-full justify-start gap-2 bg-green-600 hover:bg-green-700 text-white"
+                      onClick={async () => {
+                        try {
+                          const loadingToast = toast.loading('Resgatando bônus...');
+                          const pending = (profile as any).creditos_pendentes;
+
+                          // 1. Create Purchase Record
+                          const { error: purchaseError } = await supabase
+                            .from('additional_reports_purchases')
+                            .insert({
+                              user_id: user?.id,
+                              preco_total: 0, // Bonus has no cost
+                              quantidade: pending,
+                              payment_status: 'approved',
+                              payment_id: `bonus_${Date.now()}`
+                            } as any);
+
+                          if (purchaseError) throw purchaseError;
+
+                          // 2. Decrement Pending Credits
+                          const { error: updateError } = await supabase
+                            .from('profiles')
+                            .update({ creditos_pendentes: 0 } as any)
+                            .eq('id', user?.id);
+
+                          if (updateError) throw updateError;
+
+                          toast.dismiss(loadingToast);
+                          toast.success(`${pending} crédito(s) resgatado(s) com sucesso!`);
+
+                          // Force refresh
+                          window.location.reload();
+                        } catch (error) {
+                          console.error(error);
+                          toast.error('Erro ao resgatar bônus');
+                        }
+                      }}
+                    >
+                      <Gift className="h-4 w-4" />
+                      Resgatar {((profile as any)?.creditos_pendentes || 0)} Bônus
                     </Button>
                   )}
                 </div>

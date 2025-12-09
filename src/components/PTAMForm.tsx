@@ -1,10 +1,20 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useLocation, useBlocker } from "react-router-dom"; // Added useBlocker
 import { PTAMData, defaultPTAMData } from "@/types/ptam";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { FileText, Download, Eye, ArrowLeft, Printer } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"; // Added Dialog components
 import { Solicitante } from "./form-sections/Solicitante";
 import { Avaliador } from "./form-sections/Avaliador";
 import { Finalidade } from "./form-sections/Finalidade";
@@ -60,66 +70,110 @@ export const PTAMForm = () => {
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
 
+  // Check if user effectively has a recurring plan
+  const hasRecurringPlan = subscription &&
+    (subscription.status === 'active' || subscription.status === 'trialing') &&
+    (subscription.plans as any)?.tipo !== 'avulso';
+
   // Persistence Key
   const STORAGE_KEY = `ptam_form_draft_${user?.id || 'guest'}`;
 
-  // Load initial data: Edit Data > Local Storage > Default
+  // Load initial data logic - Improved Step Persistence
   useEffect(() => {
     if (location.state?.editData) {
       setFormData(location.state.editData as PTAMData);
       setDraftId(location.state.avaliacaoId || null);
-      if (location.state.currentSection) {
+      if (typeof location.state.currentSection === 'number') {
         setCurrentSection(location.state.currentSection);
+      } else if (location.state.editData.savedSection !== undefined) {
+        // Restore section from DB data
+        setCurrentSection(location.state.editData.savedSection);
       }
-      // Clear state to avoid re-loading on refresh if state persists (optional, but keep per existing logic)
-      window.history.replaceState({}, document.title);
     } else {
-      // Try to load from local storage
+      // Restore from Local Storage
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (parsed.user_id === user?.id) { // Only load if same user
-            setFormData(parsed.formData);
-            setCurrentSection(parsed.currentSection || 0);
+          if (parsed.user_id === user?.id) {
+            setFormData(prev => ({ ...prev, ...parsed.formData }));
+            // Ensure section is restored and valid
+            if (typeof parsed.currentSection === 'number' && parsed.currentSection >= 0) {
+              setCurrentSection(parsed.currentSection);
+            }
             setDraftId(parsed.draftId || null);
-            toast.info('Rascunho local restaurado.');
+            toast.info('Rascunho recuperado automaticamente.');
           }
         } catch (e) {
           console.error('Error parsing local storage draft', e);
         }
-      }
-
-      if (!location.state?.skipTemplate && !localStorage.getItem(STORAGE_KEY)) {
+      } else if (!location.state?.skipTemplate) {
         setShowTemplateSelector(true);
       }
     }
-  }, [location.state, user?.id]); // specific dependency on user.id
+  }, [user?.id]);
 
-  // Save to Local Storage on Change
+  // Save to Local Storage
   useEffect(() => {
-    if (formData && Object.keys(formData).length > 0) {
+    if (user?.id && formData) {
       const stateToSave = {
         formData,
         currentSection,
         draftId,
-        user_id: user?.id,
+        user_id: user.id,
         timestamp: Date.now()
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
     }
   }, [formData, currentSection, draftId, user?.id]);
 
+  // Handle Browser Close/Reload
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (formData && Object.keys(formData).length > 0 && !isFinalized) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [formData, isFinalized]);
 
-  // Auto-save: salvar automaticamente a cada alteração
+  // Internal Navigation Blocker
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      !isFinalized &&
+      Object.keys(formData).length > 0 &&
+      currentLocation.pathname !== nextLocation.pathname
+  );
+
+  const handleBlockerDiscard = () => {
+    if (blocker.state === "blocked") {
+      localStorage.removeItem(STORAGE_KEY); // Discard logic
+      blocker.proceed();
+    }
+  };
+
+  const handleBlockerSave = async () => {
+    if (blocker.state === "blocked") {
+      await handleSaveDraft(); // Save then proceed
+      blocker.proceed();
+    }
+  };
+
+  //  // Auto-save: salvar automaticamente a cada alteração
   useEffect(() => {
     if (!user || !formData || Object.keys(formData).length === 0) return;
 
     const autoSave = async () => {
       try {
+        // Incluir currentSection no form_data para persistência entre navegadores
+        const formDataWithSection = { ...formData, savedSection: currentSection };
+
         const dataToSave = {
           user_id: user.id,
-          form_data: formData as any,
+          form_data: formDataWithSection as any,
           status: 'rascunho',
           finalidade: formData.finalidade || null,
           tipo_imovel: formData.tipoImovel || null,
@@ -169,7 +223,7 @@ export const PTAMForm = () => {
 
     const timeoutId = setTimeout(autoSave, 2000);
     return () => clearTimeout(timeoutId);
-  }, [formData, user, draftId]);
+  }, [formData, user, draftId, currentSection]); // Added currentSection dependency
 
   const handleTemplateSelect = (templateData: any) => {
     if (Object.keys(templateData).length > 0) {
@@ -192,9 +246,12 @@ export const PTAMForm = () => {
     }
 
     try {
+      // Incluir currentSection
+      const formDataWithSection = { ...formData, savedSection: currentSection };
+
       const dataToSave = {
         user_id: user.id,
-        form_data: formData as any,
+        form_data: formDataWithSection as any,
         status: 'rascunho',
         finalidade: formData.finalidade || null,
         tipo_imovel: formData.tipoImovel || null,
@@ -519,6 +576,47 @@ export const PTAMForm = () => {
           </div>
         </div>
       </div>
+      <AlertDialog open={blocker.state === "blocked"}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {hasRecurringPlan ? "Você tem alterações não salvas" : "Atenção: Você não possui um plano ativo"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              {hasRecurringPlan ? (
+                "Se você sair agora, as alterações não salvas serão perdidas. Deseja salvar como rascunho antes de sair?"
+              ) : (
+                <>
+                  <p>Você não possui um plano ativo (Mensal ou Anual).</p>
+                  <p className="font-bold text-destructive">
+                    Se sair agora, você perderá este rascunho e todo o progresso feito, pois o salvamento é exclusivo para assinantes.
+                  </p>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => blocker.reset()}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBlockerDiscard} className="bg-destructive hover:bg-destructive/90 text-white">
+              {hasRecurringPlan ? "Sair sem Salvar" : "Sair e Perder Dados"}
+            </AlertDialogAction>
+            {hasRecurringPlan && (
+              <AlertDialogAction onClick={handleBlockerSave}>
+                Salvar e Sair
+              </AlertDialogAction>
+            )}
+            {!hasRecurringPlan && (
+              <Button variant="default" onClick={() => {
+                // Save locally just in case? No, honesty first.
+                // Redirect to plans?
+                window.open('/dashboard/planos', '_blank');
+              }}>
+                Assinar Agora
+              </Button>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
