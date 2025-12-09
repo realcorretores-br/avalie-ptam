@@ -141,18 +141,11 @@ serve(async (req) => {
             .eq('id', externalReference);
 
           // Add reports to active subscription
-<<<<<<< HEAD
-          const { data: activeSubscription } = await supabaseClient
-=======
           let { data: activeSubscription } = await supabaseClient
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
             .from('subscriptions')
             .select('*')
             .eq('user_id', purchase.user_id)
             .eq('status', 'active')
-<<<<<<< HEAD
-            .single();
-=======
             .maybeSingle();
 
           // If no active subscription, try to find any subscription or create a new one (Avulso)
@@ -219,27 +212,18 @@ serve(async (req) => {
               }
             }
           }
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
 
           if (activeSubscription) {
             await supabaseClient
               .from('subscriptions')
               .update({
-<<<<<<< HEAD
-                relatorios_disponiveis: activeSubscription.relatorios_disponiveis + purchase.quantidade,
-=======
                 relatorios_disponiveis: (activeSubscription.relatorios_disponiveis || 0) + purchase.quantidade,
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
               })
               .eq('id', activeSubscription.id);
 
             console.log(`Added ${purchase.quantidade} reports to subscription ${activeSubscription.id}`);
           } else {
-<<<<<<< HEAD
-            console.error('No active subscription found for user:', purchase.user_id);
-=======
             console.error('Failed to ensure active subscription for user:', purchase.user_id);
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
           }
         } else {
           // This is a regular plan subscription

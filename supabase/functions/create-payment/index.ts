@@ -214,7 +214,6 @@ serve(async (req: Request) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
-<<<<<<< HEAD
     } else if (gateway.name === 'asaas') {
       const apiKey = gateway.config.access_token_key;
       if (!apiKey) {
@@ -295,8 +294,6 @@ serve(async (req: Request) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
-=======
->>>>>>> 2fe6e471d2673a33e58a9ce4b5693283bac90327
     } else {
       throw new Error(`Gateway ${gateway.display_name} ainda não implementado`);
     }
