@@ -25,5 +25,8 @@ jobs:
       - name: Link Supabase Project
         run: supabase link --project-ref $SUPABASE_PROJECT_ID --password $SUPABASE_DB_PASSWORD
 
+      - name: Deploy Database Migrations
+        run: supabase db push
+
       - name: Deploy Edge Functions
         run: supabase functions deploy --no-verify-jwt
