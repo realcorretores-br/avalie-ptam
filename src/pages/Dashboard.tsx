@@ -70,9 +70,11 @@ const Dashboard = () => {
               refetchSubscription();
               window.history.replaceState({}, '', window.location.pathname);
             } else {
-              toast.info('Pagamento em processamento. Aguarde alguns instantes.');
+              console.error('Payment check failed:', data);
+              toast.info(data?.error || 'Pagamento em processamento. Aguarde alguns instantes.');
             }
-          }).catch(() => {
+          }).catch((err) => {
+            console.error('Payment check invocation failed:', err);
             toast.dismiss(toastId);
             toast.info('Pagamento em processamento. Aguarde a confirmação.');
           });
