@@ -147,10 +147,11 @@ serve(async (req: Request) => {
 
     console.log('Using payment gateway:', gateway.display_name);
 
-    // Determine base URL for return/callback
-    // Prefer returnUrl passed from client, fallback to origin, then localhost
-    const origin = (clientReturnUrl ? new URL(clientReturnUrl).origin : null) || req.headers.get('origin') || 'http://localhost:3000';
-    const returnUrl = clientReturnUrl || `${origin}/dashboard?payment=success`;
+    // Determine base URL for return/callback - STRICT DOMAIN ENFORCEMENT
+    // User requirement: "Nunca enviar localhost, 127.0.0.1... O domínio deve ser estático... evitando depender de window.location"
+    const appDomain = Deno.env.get('APP_DOMAIN') || 'https://avalie-ptam.vercel.app';
+    const origin = appDomain.replace(/\/$/, ''); // Remove trailing slash if present
+    const returnUrl = `${origin}/dashboard?payment=success`;
     const cancelUrl = `${origin}/dashboard?payment=failure`;
 
     if (gateway.name === 'mercadopago') {
