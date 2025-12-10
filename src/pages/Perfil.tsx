@@ -71,6 +71,7 @@ const Perfil = () => {
   const [formData, setFormData] = useState({
     cpf: profile?.cpf || '',
     rg: profile?.rg || '',
+    telefone: profile?.telefone || '',
     passaporte: profile?.passaporte || '',
     paisOrigem: profile?.pais_origem || '',
     endereco: profile?.endereco || '',
@@ -96,6 +97,7 @@ const Perfil = () => {
       setFormData({
         cpf: profile.cpf || '',
         rg: profile.rg || '',
+        telefone: profile.telefone || '',
         passaporte: profile.passaporte || '',
         paisOrigem: profile.pais_origem || '',
         endereco: profile.endereco || '',
@@ -324,6 +326,7 @@ const Perfil = () => {
           crea: tipoAvaliador === 'engenheiro' ? formData.crea : null,
           cnae: formData.cnae || null,
           cnpj: formData.cnpj || null,
+          telefone: formData.telefone || null,
           theme_color: themeColor,
         })
         .eq('id', user.id);
@@ -454,11 +457,11 @@ const Perfil = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="telefone">Telefone (não editável)</Label>
+                  <Label htmlFor="telefone">Telefone</Label>
                   <Input
                     id="telefone"
-                    value={profile?.telefone}
-                    disabled
+                    value={formData.telefone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, telefone: e.target.value }))}
                   />
                 </div>
 
