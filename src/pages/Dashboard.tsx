@@ -49,19 +49,38 @@ const Dashboard = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get('payment');
+    const paymentId = params.get('payment_id') || params.get('collection_id');
 
     if (paymentStatus) {
       if (paymentStatus === 'success') {
         toast.success('Créditos adicionados com sucesso! Você já pode utilizar todos os recursos do sistema.');
         refetchSubscription();
+        window.history.replaceState({}, '', window.location.pathname);
+      } else if (paymentStatus === 'pending') {
+        // Optimistic check: Maybe it IS approved now?
+        if (paymentId) {
+          const toastId = toast.loading('Verificando status do pagamento...');
 
-        // Remove query param without reloading
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
+          supabase.functions.invoke('check-payment', {
+            body: { paymentId: paymentId }
+          }).then(({ data, error }) => {
+            toast.dismiss(toastId);
+            if (!error && data?.status === 'approved') {
+              toast.success('Pagamento confirmado! Seus créditos foram adicionados.');
+              refetchSubscription();
+              window.history.replaceState({}, '', window.location.pathname);
+            } else {
+              toast.info('Pagamento em processamento. Aguarde alguns instantes.');
+            }
+          }).catch(() => {
+            toast.dismiss(toastId);
+            toast.info('Pagamento em processamento. Aguarde a confirmação.');
+          });
+        } else {
+          toast.info('Pagamento em processamento. Aguarde a confirmação.');
+        }
       } else if (paymentStatus === 'failure') {
         toast.error('O pagamento falhou ou foi cancelado.');
-      } else if (paymentStatus === 'pending') {
-        toast.info('Pagamento em processamento. Aguarde a confirmação.');
       }
     }
   }, [refetchSubscription]);
