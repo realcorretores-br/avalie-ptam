@@ -193,7 +193,7 @@ export const Anotacoes = () => {
                 >
                   <div className="flex flex-col gap-3 min-h-[150px]">
                     <div className="flex-1">
-                      <p className="text-sm whitespace-pre-wrap font-handwriting" style={{ fontFamily: 'cursive' }}>
+                      <p className="text-sm whitespace-pre-wrap font-poppins">
                         {note.content}
                       </p>
                     </div>
