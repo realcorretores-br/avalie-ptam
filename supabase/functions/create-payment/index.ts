@@ -223,20 +223,22 @@ serve(async (req: Request) => {
 
       console.log('Creating Asaas payment...');
 
-      // 1. Create or Get Customer
+      // 1. Validate CPF
+      const cpfCnpj = profile.cpf ? profile.cpf.replace(/\D/g, '') : '';
+      if (!cpfCnpj || (cpfCnpj.length !== 11 && cpfCnpj.length !== 14)) {
+        throw new Error('Não conseguimos processar a compra porque o CPF ou CNPJ do seu perfil está incompleto ou inválido. Por favor, atualize seus dados no seu perfil e tente novamente.');
+      }
+
+      // 2. Create or Get Customer
       const customerPayload = {
         name: profile.nome_completo,
         email: profile.email,
-        cpfCnpj: profile.cpf ? profile.cpf.replace(/\D/g, '') : undefined,
+        cpfCnpj: cpfCnpj,
         mobilePhone: profile.telefone ? profile.telefone.replace(/\D/g, '') : undefined,
         externalReference: userId
       };
 
-      // Check if customer exists (optional optimization, but Asaas handles duplicates by email/cpf usually, 
-      // best practice is to search first or just try to create and handle existing)
-      // For simplicity, we'll try to create. Asaas returns the existing one if match found (or we can search).
-      // Let's search first to be safe.
-
+      // Check if customer exists
       let customerId;
       const searchResponse = await fetch(`https://sandbox.asaas.com/api/v3/customers?email=${profile.email}`, {
         headers: { 'access_token': apiKey }
@@ -255,13 +257,20 @@ serve(async (req: Request) => {
           body: JSON.stringify(customerPayload)
         });
         const customerData = await createCustomerResponse.json();
+
         if (!createCustomerResponse.ok) {
-          throw new Error('Erro ao criar cliente no Asaas: ' + JSON.stringify(customerData));
+          console.error('Asaas Customer Creation Error:', customerData);
+          // Check for specific CPF error
+          if (JSON.stringify(customerData).includes('invalid_object') || JSON.stringify(customerData).includes('CPF/CNPJ')) {
+            throw new Error('Não conseguimos processar a compra porque o CPF ou CNPJ do seu perfil está incompleto ou inválido. Por favor, atualize seus dados no seu perfil e tente novamente.');
+          }
+          // Fallback for other errors
+          throw new Error('Ocorreu um erro interno ao processar sua cobrança. Nossa equipe já foi notificada e está corrigindo isso. Tente novamente em alguns instantes.');
         }
         customerId = customerData.id;
       }
 
-      // 2. Create Payment
+      // 3. Create Payment
       const paymentPayload = {
         customer: customerId,
         billingType: 'UNDEFINED', // Allows user to choose (PIX, BOLETO, CREDIT_CARD)
@@ -287,7 +296,14 @@ serve(async (req: Request) => {
       const paymentData = await paymentResponse.json();
 
       if (!paymentResponse.ok) {
-        throw new Error('Erro ao criar cobrança no Asaas: ' + JSON.stringify(paymentData));
+        console.error('Asaas Payment Error:', paymentData);
+        const errorString = JSON.stringify(paymentData);
+
+        if (errorString.includes('domínio configurado')) {
+          throw new Error('Ocorreu um erro interno ao processar sua cobrança. Nossa equipe já foi notificada e está corrigindo isso. Tente novamente em alguns instantes.');
+        }
+
+        throw new Error('Ocorreu um erro ao processar o pagamento com a operadora. Tente novamente.');
       }
 
       return new Response(

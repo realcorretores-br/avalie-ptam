@@ -316,15 +316,16 @@ serve(async (req: Request) => {
       console.log('Creating Asaas payment for additional reports...');
 
       // Validate CPF
-      if (!profile.cpf) {
-        throw new Error('CPF é obrigatório para pagamentos. Por favor, atualize seu perfil.');
+      const cpfCnpj = profile.cpf ? profile.cpf.replace(/\D/g, '') : '';
+      if (!cpfCnpj || (cpfCnpj.length !== 11 && cpfCnpj.length !== 14)) {
+        throw new Error('Não conseguimos processar a compra porque o CPF ou CNPJ do seu perfil está incompleto ou inválido. Por favor, atualize seus dados no seu perfil e tente novamente.');
       }
 
       // 1. Create or Get Customer
       const customerPayload = {
         name: profile.nome_completo,
         email: profile.email,
-        cpfCnpj: profile.cpf.replace(/\D/g, ''),
+        cpfCnpj: cpfCnpj,
         mobilePhone: profile.telefone ? profile.telefone.replace(/\D/g, '') : undefined,
         externalReference: userId
       };
@@ -347,8 +348,13 @@ serve(async (req: Request) => {
           body: JSON.stringify(customerPayload)
         });
         const customerData = await createCustomerResponse.json();
+
         if (!createCustomerResponse.ok) {
-          throw new Error('Erro ao criar cliente no Asaas: ' + JSON.stringify(customerData));
+          console.error('Asaas Customer Creation Error:', customerData);
+          if (JSON.stringify(customerData).includes('invalid_object') || JSON.stringify(customerData).includes('CPF/CNPJ')) {
+            throw new Error('Não conseguimos processar a compra porque o CPF ou CNPJ do seu perfil está incompleto ou inválido. Por favor, atualize seus dados no seu perfil e tente novamente.');
+          }
+          throw new Error('Ocorreu um erro interno ao processar sua cobrança. Nossa equipe já foi notificada e está corrigindo isso. Tente novamente em alguns instantes.');
         }
         customerId = customerData.id;
       }
@@ -386,7 +392,12 @@ serve(async (req: Request) => {
       const paymentData = await paymentResponse.json();
 
       if (!paymentResponse.ok) {
-        throw new Error('Erro ao criar cobrança no Asaas: ' + JSON.stringify(paymentData));
+        console.error('Asaas Payment Error:', paymentData);
+        const errorString = JSON.stringify(paymentData);
+        if (errorString.includes('domínio configurado')) {
+          throw new Error('Ocorreu um erro interno ao processar sua cobrança. Nossa equipe já foi notificada e está corrigindo isso. Tente novamente em alguns instantes.');
+        }
+        throw new Error('Ocorreu um erro ao processar o pagamento com a operadora. Tente novamente.');
       }
 
       // Update purchase with payment info
