@@ -51,6 +51,74 @@ const AdminPaymentGateways = () => {
         }
     };
 
+    const initializeMercadoPago = async () => {
+        setSaving(true);
+        try {
+            // First check if it exists (race condition check)
+            const { data: existing } = await supabase
+                .from('payment_gateways')
+                .select('*')
+                .eq('name', 'mercadopago')
+                .maybeSingle();
+
+            if (existing) {
+                toast.info("Configuração já existe. Atualizando lista...");
+                await fetchGateways();
+                return;
+            }
+
+            const { error } = await supabase
+                .from('payment_gateways')
+                .insert({
+                    name: 'mercadopago',
+                    display_name: 'Mercado Pago',
+                    is_active: true,
+                    config: {
+                        public_key: 'APP_USR-1a1eaee9-9823-4462-8792-0d46fd19517b',
+                        access_token: 'APP_USR-4196436067933490-102406-f5fbb599bd45ccd66aad2fe22e8829dd-287066595',
+                        client_id: '4196436067933490',
+                        client_secret: 'GwBQ1ZyHhtnRAyiJTy3KFw6FWEqreW7h'
+                    }
+                });
+
+            if (error) throw error;
+            toast.success("Mercado Pago inicializado com sucesso!");
+
+            // Check and ensure 'avulso' plan exists for buttons to appear
+            const { data: existingPlan } = await supabase
+                .from('plans')
+                .select('*')
+                .eq('tipo', 'avulso')
+                .maybeSingle();
+
+            if (!existingPlan) {
+                const { error: planError } = await supabase
+                    .from('plans')
+                    .insert({
+                        tipo: 'avulso',
+                        nome: 'Crédito Avulso',
+                        descricao: 'Pague apenas pelo que usar',
+                        preco: 29.90, // Default price
+                        relatorios_incluidos: 1,
+                        ativo: true
+                    });
+                if (planError) {
+                    console.error('Error creating default plan:', planError);
+                    toast.error('Erro ao criar plano avulso padrão');
+                } else {
+                    toast.success("Plano 'Avulso' criado com sucesso!");
+                }
+            }
+
+            await fetchGateways();
+        } catch (error) {
+            console.error('Error initializing gateway:', error);
+            toast.error('Erro ao inicializar configurações');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const handleUpdateGateway = async (gatewayIndex: number, field: string, value: any) => {
         const updatedGateways = [...gateways];
         if (field === 'is_active') {
@@ -193,11 +261,25 @@ const AdminPaymentGateways = () => {
 
                     {gateways.length === 0 && (
                         <div className="text-center py-10 text-muted-foreground">
-                            Nenhum gateway encontrado. Verifique se as migrações foram rodadas.
-                            <Button variant="link" onClick={fetchGateways} className="gap-2 mt-2">
-                                <RefreshCw className="h-4 w-4" />
-                                Tentar Novamente
-                            </Button>
+                            Nenhum gateway encontrado.
+                            <div className="flex flex-col items-center gap-4 mt-4">
+                                <Button variant="outline" onClick={fetchGateways} className="gap-2">
+                                    <RefreshCw className="h-4 w-4" />
+                                    Recarregar
+                                </Button>
+                                <Separator className="w-[100px]" />
+                                <Button
+                                    onClick={initializeMercadoPago}
+                                    disabled={saving}
+                                    className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                                >
+                                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                                    Inicializar Mercado Pago
+                                </Button>
+                                <p className="text-xs text-muted-foreground max-w-sm">
+                                    Se a migração falhou, clique acima para criar a configuração inicial do Mercado Pago no banco de dados.
+                                </p>
+                            </div>
                         </div>
                     )}
                 </div>
