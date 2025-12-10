@@ -148,9 +148,10 @@ serve(async (req: Request) => {
     console.log('Using payment gateway:', gateway.display_name);
 
     // Determine base URL for return/callback - STRICT DOMAIN ENFORCEMENT
-    // User requirement: "Nunca enviar localhost, 127.0.0.1... O domínio deve ser estático... evitando depender de window.location"
-    const appDomain = Deno.env.get('APP_DOMAIN') || 'https://avalie-ptam.vercel.app';
-    const origin = appDomain.replace(/\/$/, ''); // Remove trailing slash if present
+    // User requirement: "Utilizar um domínio estático e oficial definido em variável de ambiente, como ASASAAS_DOMAIN"
+    const appDomain = Deno.env.get('ASAAS_DOMAIN') || Deno.env.get('APP_DOMAIN') || 'https://avalie-ptam.vercel.app';
+
+    const origin = appDomain.includes('localhost') ? 'https://avalie-ptam.vercel.app' : appDomain.replace(/\/$/, '');
     const returnUrl = `${origin}/dashboard?payment=success`;
     const cancelUrl = `${origin}/dashboard?payment=failure`;
 

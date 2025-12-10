@@ -67,7 +67,7 @@ const SelecaoPlano = () => {
         body: {
           planId: selectedPlan,
           userId: user.id,
-          returnUrl: window.location.origin + '/dashboard?payment=success'
+          userId: user.id
         }
       });
 
