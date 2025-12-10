@@ -116,228 +116,304 @@ serve(async (req: Request) => {
         throw new Error(`Secret ${gateway.config.access_token_key} não configurado`);
       }
 
-      // Criar preferência de pagamento no Mercado Pago
-      const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          items: [{
-            title: plan.nome,
-            description: plan.descricao,
-            quantity: 1,
-            unit_price: parseFloat(plan.preco),
-          }],
-          payer: {
+      // 4. Criar Preferência ou Assinatura no Mercado Pago
+      let initPoint;
+      let paymentId;
+
+      const quantity = body.quantity || 1;
+      const isSubscription = plan.tipo !== 'avulso';
+      const title = isSubscription ? `Assinatura ${plan.nome}` : `Crédito Avulso PTAM`;
+      const unitPrice = 0.01; // User requested 0.01 for testing/production setup
+
+      if (gateway.name === 'mercadopago') {
+        const accessToken = 'APP_USR-4196436067933490-102406-f5fbb599bd45ccd66aad2fe22e8829dd-287066595';
+
+        if (isSubscription) {
+          // CRIAR ASSINATURA (PREAPPROVAL)
+          console.log('Creating Preapproval for:', plan.nome);
+
+          const preapprovalBody = {
+            reason: title,
+            external_reference: userId,
+            payer_email: profile.email,
+            auto_recurring: {
+              frequency: 1,
+              frequency_type: 'months',
+              transaction_amount: unitPrice,
+              currency_id: 'BRL'
+            },
+            back_url: appDomain + '/dashboard',
+            status: 'pending'
+          };
+
+          const mpResponse = await fetch('https://api.mercadopago.com/preapproval', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(preapprovalBody)
+          });
+
+          const mpData = await mpResponse.json();
+          console.log('MP Preapproval Response:', mpData);
+
+          if (!mpResponse.ok) {
+            throw new Error(mpData.message || 'Erro ao criar assinatura no Mercado Pago');
+          }
+
+          initPoint = mpData.init_point;
+          paymentId = mpData.id;
+
+          // Return the payment URL and ID for preapproval
+          return new Response(
+            JSON.stringify({
+              paymentUrl: initPoint,
+              paymentId: paymentId
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+
+        } else {
+          // CRIAR PAGAMENTO ÚNICO (PREFERENCE)
+          console.log('Creating Preference for:', title);
+
+          const preferenceBody = {
+            items: [
+              {
+                id: plan.id,
+                title: title,
+                description: `Crédito PTAM (relatórios)`,
+                quantity: quantity,
+                currency_id: 'BRL',
+                unit_price: unitPrice
+              }
+            ],
+            payer: {
+              email: profile.email,
+              name: profile.nome_completo,
+              identification: {
+                type: 'CPF',
+                number: profile.cpf ? profile.cpf.replace(/\D/g, '') : ''
+              }
+            },
+            back_urls: {
+              success: appDomain + '/dashboard?payment=success',
+              failure: appDomain + '/dashboard?payment=failure',
+              pending: appDomain + '/dashboard?payment=pending'
+            },
+            auto_return: 'approved',
+            external_reference: userId,
+            notification_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/mp-webhook`,
+            metadata: {
+              plan_id: plan.id,
+              user_id: userId
+            }
+          };
+
+          const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(preferenceBody)
+          });
+
+          const mpData = await mpResponse.json();
+          console.log('MP Preference Response:', mpData);
+
+          if (!mpResponse.ok) {
+            throw new Error(mpData.message || 'Erro ao criar preferência no Mercado Pago');
+          }
+
+          initPoint = mpData.init_point;
+          paymentId = mpData.id;
+
+          return new Response(
+            JSON.stringify({
+              paymentUrl: initPoint,
+              paymentId: paymentId
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else if (gateway.name === 'abacatepay') {
+        const apiKey = Deno.env.get(gateway.config.access_token_key);
+        if (!apiKey) {
+          throw new Error(`Secret ${gateway.config.access_token_key} não configurado`);
+        }
+
+        console.log('Creating AbacatePay billing...');
+
+        // Clean CPF
+        const taxId = profile.cpf ? profile.cpf.replace(/\D/g, '') : null;
+
+        if (!taxId) {
+          throw new Error('CPF é obrigatório para pagamentos via PIX. Por favor, atualize seu perfil.');
+        }
+
+        // AbacatePay requires a customer. We'll pass customer details in the billing creation if possible,
+        // or we might need to create a customer first. 
+        // According to AbacatePay docs (assumed), we can pass customer info directly.
+
+        // Sanitize CPF and Phone
+        const cleanTaxId = taxId.replace(/\D/g, '');
+        const cleanPhone = profile.telefone ? profile.telefone.replace(/\D/g, '') : '11999999999'; // Fallback if missing, as AbacatePay requires it
+
+        const pixPayload = {
+          amount: Math.round(parseFloat(plan.preco) * 100), // Price in cents
+          description: plan.descricao || `Assinatura ${plan.nome}`,
+          customer: {
+            name: profile.nome_completo || 'Cliente',
             email: profile.email,
-            name: profile.nome_completo,
-            identification: profile.cpf ? { type: 'CPF', number: profile.cpf.replace(/\D/g, '') } : undefined
+            taxId: cleanTaxId,
+            cellphone: cleanPhone
           },
-          back_urls: {
-            success: returnUrl,
-            failure: cancelUrl,
-            pending: `${origin}/dashboard?payment=pending`,
-          },
-          auto_return: 'approved',
-          external_reference: userId,
           metadata: {
             user_id: userId,
             plan_id: planId,
+            externalId: planId
+          }
+        };
+
+        console.log('AbacatePay Payload:', JSON.stringify(pixPayload));
+
+        const abacateResponse = await fetch('https://api.abacatepay.com/v1/pixQrCode/create', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
           },
-          notification_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/mp-webhook`,
-        }),
-      });
+          body: JSON.stringify(pixPayload),
+        });
 
-      const preference = await mpResponse.json();
+        const pixData = await abacateResponse.json();
+        console.log('AbacatePay Response Status:', abacateResponse.status);
+        console.log('AbacatePay Response Body:', JSON.stringify(pixData));
 
-      if (!mpResponse.ok) {
-        console.error('Mercado Pago Error:', preference);
-        throw new Error('Erro ao criar preferência de pagamento no Mercado Pago');
-      }
-
-      return new Response(
-        JSON.stringify({ init_point: preference.init_point, preference_id: preference.id }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-
-    } else if (gateway.name === 'abacatepay') {
-      const apiKey = Deno.env.get(gateway.config.access_token_key);
-      if (!apiKey) {
-        throw new Error(`Secret ${gateway.config.access_token_key} não configurado`);
-      }
-
-      console.log('Creating AbacatePay billing...');
-
-      // Clean CPF
-      const taxId = profile.cpf ? profile.cpf.replace(/\D/g, '') : null;
-
-      if (!taxId) {
-        throw new Error('CPF é obrigatório para pagamentos via PIX. Por favor, atualize seu perfil.');
-      }
-
-      // AbacatePay requires a customer. We'll pass customer details in the billing creation if possible,
-      // or we might need to create a customer first. 
-      // According to AbacatePay docs (assumed), we can pass customer info directly.
-
-      // Sanitize CPF and Phone
-      const cleanTaxId = taxId.replace(/\D/g, '');
-      const cleanPhone = profile.telefone ? profile.telefone.replace(/\D/g, '') : '11999999999'; // Fallback if missing, as AbacatePay requires it
-
-      const pixPayload = {
-        amount: Math.round(parseFloat(plan.preco) * 100), // Price in cents
-        description: plan.descricao || `Assinatura ${plan.nome}`,
-        customer: {
-          name: profile.nome_completo || 'Cliente',
-          email: profile.email,
-          taxId: cleanTaxId,
-          cellphone: cleanPhone
-        },
-        metadata: {
-          user_id: userId,
-          plan_id: planId,
-          externalId: planId
+        if (!abacateResponse.ok) {
+          console.error('AbacatePay Error:', pixData);
+          throw new Error('Erro AbacatePay: ' + (pixData.error?.message || JSON.stringify(pixData)));
         }
-      };
 
-      console.log('AbacatePay Payload:', JSON.stringify(pixPayload));
+        console.log('AbacatePay Success:', pixData);
 
-      const abacateResponse = await fetch('https://api.abacatepay.com/v1/pixQrCode/create', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(pixPayload),
-      });
+        // AbacatePay returns 'data.brCode' (copy-paste) and 'data.brCodeBase64' (image)
+        return new Response(
+          JSON.stringify({
+            pix_code: pixData.data.brCode,
+            pix_image: pixData.data.brCodeBase64
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
 
-      const pixData = await abacateResponse.json();
-      console.log('AbacatePay Response Status:', abacateResponse.status);
-      console.log('AbacatePay Response Body:', JSON.stringify(pixData));
+      } else if (gateway.name === 'asaas') {
+        const apiKey = gateway.config.access_token_key;
+        if (!apiKey) {
+          throw new Error(`Secret ${gateway.config.access_token_key} não configurado`);
+        }
 
-      if (!abacateResponse.ok) {
-        console.error('AbacatePay Error:', pixData);
-        throw new Error('Erro AbacatePay: ' + (pixData.error?.message || JSON.stringify(pixData)));
-      }
+        console.log('Creating Asaas payment...');
 
-      console.log('AbacatePay Success:', pixData);
+        // 1. Validate CPF
+        const cpfCnpj = profile.cpf ? profile.cpf.replace(/\D/g, '') : '';
+        if (!cpfCnpj || (cpfCnpj.length !== 11 && cpfCnpj.length !== 14)) {
+          throw new Error('Não conseguimos processar a compra porque o CPF ou CNPJ do seu perfil está incompleto ou inválido. Por favor, atualize seus dados no seu perfil e tente novamente.');
+        }
 
-      // AbacatePay returns 'data.brCode' (copy-paste) and 'data.brCodeBase64' (image)
-      return new Response(
-        JSON.stringify({
-          pix_code: pixData.data.brCode,
-          pix_image: pixData.data.brCodeBase64
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+        // 2. Create or Get Customer
+        const customerPayload = {
+          name: profile.nome_completo,
+          email: profile.email,
+          cpfCnpj: cpfCnpj,
+          mobilePhone: profile.telefone ? profile.telefone.replace(/\D/g, '') : undefined,
+          externalReference: userId
+        };
 
-    } else if (gateway.name === 'asaas') {
-      const apiKey = gateway.config.access_token_key;
-      if (!apiKey) {
-        throw new Error(`Secret ${gateway.config.access_token_key} não configurado`);
-      }
+        // Check if customer exists
+        let customerId;
+        const searchResponse = await fetch(`https://sandbox.asaas.com/api/v3/customers?email=${profile.email}`, {
+          headers: { 'access_token': apiKey }
+        });
 
-      console.log('Creating Asaas payment...');
+        const searchData = await searchResponse.json();
+        if (searchData.data && searchData.data.length > 0) {
+          customerId = searchData.data[0].id;
+        } else {
+          const createCustomerResponse = await fetch('https://sandbox.asaas.com/api/v3/customers', {
+            method: 'POST',
+            headers: {
+              'access_token': apiKey,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(customerPayload)
+          });
+          const customerData = await createCustomerResponse.json();
 
-      // 1. Validate CPF
-      const cpfCnpj = profile.cpf ? profile.cpf.replace(/\D/g, '') : '';
-      if (!cpfCnpj || (cpfCnpj.length !== 11 && cpfCnpj.length !== 14)) {
-        throw new Error('Não conseguimos processar a compra porque o CPF ou CNPJ do seu perfil está incompleto ou inválido. Por favor, atualize seus dados no seu perfil e tente novamente.');
-      }
+          if (!createCustomerResponse.ok) {
+            console.error('Asaas Customer Creation Error:', customerData);
+            // Check for specific CPF error
+            if (JSON.stringify(customerData).includes('invalid_object') || JSON.stringify(customerData).includes('CPF/CNPJ')) {
+              throw new Error('Não conseguimos processar a compra porque o CPF ou CNPJ do seu perfil está incompleto ou inválido. Por favor, atualize seus dados no seu perfil e tente novamente.');
+            }
+            // Fallback for other errors
+            throw new Error('Ocorreu um erro interno ao processar sua cobrança. Nossa equipe já foi notificada e está corrigindo isso. Tente novamente em alguns instantes.');
+          }
+          customerId = customerData.id;
+        }
 
-      // 2. Create or Get Customer
-      const customerPayload = {
-        name: profile.nome_completo,
-        email: profile.email,
-        cpfCnpj: cpfCnpj,
-        mobilePhone: profile.telefone ? profile.telefone.replace(/\D/g, '') : undefined,
-        externalReference: userId
-      };
+        // 3. Create Payment
+        const paymentPayload = {
+          customer: customerId,
+          billingType: 'UNDEFINED', // Allows user to choose (PIX, BOLETO, CREDIT_CARD)
+          value: parseFloat(plan.preco),
+          dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3 days from now
+          description: `Pagamento Plano ${plan.nome}`,
+          externalReference: JSON.stringify({ planId, userId }),
+          callback: {
+            successUrl: returnUrl,
+            autoRedirect: true
+          }
+        };
 
-      // Check if customer exists
-      let customerId;
-      const searchResponse = await fetch(`https://sandbox.asaas.com/api/v3/customers?email=${profile.email}`, {
-        headers: { 'access_token': apiKey }
-      });
-
-      const searchData = await searchResponse.json();
-      if (searchData.data && searchData.data.length > 0) {
-        customerId = searchData.data[0].id;
-      } else {
-        const createCustomerResponse = await fetch('https://sandbox.asaas.com/api/v3/customers', {
+        const paymentResponse = await fetch('https://sandbox.asaas.com/api/v3/payments', {
           method: 'POST',
           headers: {
             'access_token': apiKey,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(customerPayload)
+          body: JSON.stringify(paymentPayload)
         });
-        const customerData = await createCustomerResponse.json();
 
-        if (!createCustomerResponse.ok) {
-          console.error('Asaas Customer Creation Error:', customerData);
-          // Check for specific CPF error
-          if (JSON.stringify(customerData).includes('invalid_object') || JSON.stringify(customerData).includes('CPF/CNPJ')) {
-            throw new Error('Não conseguimos processar a compra porque o CPF ou CNPJ do seu perfil está incompleto ou inválido. Por favor, atualize seus dados no seu perfil e tente novamente.');
+        const paymentData = await paymentResponse.json();
+
+        if (!paymentResponse.ok) {
+          console.error('Asaas Payment Error:', paymentData);
+          const errorString = JSON.stringify(paymentData);
+
+          if (errorString.includes('domínio configurado')) {
+            throw new Error('Neste momento não foi possível concluir a cobrança. Tente novamente em alguns instantes.');
           }
-          // Fallback for other errors
-          throw new Error('Ocorreu um erro interno ao processar sua cobrança. Nossa equipe já foi notificada e está corrigindo isso. Tente novamente em alguns instantes.');
+
+          throw new Error('Ocorreu um erro ao processar o pagamento com a operadora. Tente novamente.');
         }
-        customerId = customerData.id;
+
+        return new Response(
+          JSON.stringify({ init_point: paymentData.invoiceUrl, payment_id: paymentData.id }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+      } else {
+        throw new Error(`Gateway ${gateway.display_name} ainda não implementado`);
       }
 
-      // 3. Create Payment
-      const paymentPayload = {
-        customer: customerId,
-        billingType: 'UNDEFINED', // Allows user to choose (PIX, BOLETO, CREDIT_CARD)
-        value: parseFloat(plan.preco),
-        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3 days from now
-        description: `Pagamento Plano ${plan.nome}`,
-        externalReference: JSON.stringify({ planId, userId }),
-        callback: {
-          successUrl: returnUrl,
-          autoRedirect: true
-        }
-      };
-
-      const paymentResponse = await fetch('https://sandbox.asaas.com/api/v3/payments', {
-        method: 'POST',
-        headers: {
-          'access_token': apiKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(paymentPayload)
-      });
-
-      const paymentData = await paymentResponse.json();
-
-      if (!paymentResponse.ok) {
-        console.error('Asaas Payment Error:', paymentData);
-        const errorString = JSON.stringify(paymentData);
-
-        if (errorString.includes('domínio configurado')) {
-          throw new Error('Neste momento não foi possível concluir a cobrança. Tente novamente em alguns instantes.');
-        }
-
-        throw new Error('Ocorreu um erro ao processar o pagamento com a operadora. Tente novamente.');
-      }
-
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return new Response(
-        JSON.stringify({ init_point: paymentData.invoiceUrl, payment_id: paymentData.id }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: errorMessage }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
-
-    } else {
-      throw new Error(`Gateway ${gateway.display_name} ainda não implementado`);
     }
-
-  } catch (error) {
-    console.error('Error processing payment:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    );
-  }
-});
+  });

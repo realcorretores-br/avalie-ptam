@@ -86,6 +86,90 @@ serve(async (req) => {
 
     console.log('Webhook signature validated successfully');
 
+    console.log('Webhook type:', type);
+
+    if (type === 'subscription_preapproval') {
+      const preapprovalId = data.id;
+      console.log('Processing subscription preapproval:', preapprovalId);
+
+      const mpResponse = await fetch(`https://api.mercadopago.com/preapproval/${preapprovalId}`, {
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN')}`,
+        },
+      });
+      const subscriptionData = await mpResponse.json();
+      console.log('Subscription Status:', subscriptionData.status);
+
+      if (subscriptionData.status === 'authorized' || subscriptionData.status === 'active') {
+        const userId = subscriptionData.external_reference;
+        const supabaseClient = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
+
+        // Determine plan based on reason or amount (simplified mapping)
+        // Ideally we store plan_id in external_reference or separate metadata, 
+        // but external_reference currently holds userId.
+        // verifying plan by title/reason
+        let creditsToAdd = 0;
+        const reason = subscriptionData.reason.toLowerCase();
+
+        if (reason.includes('ptam go')) creditsToAdd = 5;
+        else if (reason.includes('ptam pro')) creditsToAdd = 25;
+        else if (reason.includes('go')) creditsToAdd = 5; // fallback
+        else if (reason.includes('pro')) creditsToAdd = 25; // fallback
+
+        if (creditsToAdd > 0) {
+          // Update subscription in DB
+          // Find existing subscription or create
+          // For now, we update the existing active subscription or last subscription
+
+          const { data: sub, error: subError } = await supabaseClient
+            .from('subscriptions')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle(); // Assuming 1 per user for now
+
+          if (sub) {
+            await supabaseClient
+              .from('subscriptions')
+              .update({
+                status: 'active',
+                relatorios_disponiveis: (sub.relatorios_disponiveis || 0) + creditsToAdd,
+                payment_id: preapprovalId,
+                payment_status: 'approved',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', sub.id);
+          } else {
+            // Get plan ID based on name? 
+            // This is tricky without plan_id. We'll try to find a plan.
+            const { data: plan } = await supabaseClient
+              .from('plans')
+              .select('id')
+              .ilike('nome', reason.includes('go') ? '%Go%' : '%Pro%')
+              .limit(1)
+              .maybeSingle();
+
+            if (plan) {
+              await supabaseClient.from('subscriptions').insert({
+                user_id: userId,
+                plan_id: plan.id,
+                status: 'active',
+                payment_id: preapprovalId,
+                payment_status: 'approved',
+                relatorios_disponiveis: creditsToAdd,
+                relatorios_usados: 0,
+                data_inicio: new Date().toISOString()
+              });
+            }
+          }
+          console.log(`Added ${creditsToAdd} credits for user ${userId}`);
+        }
+      }
+      return new Response(JSON.stringify({ success: true }));
+    }
+
     if (type === 'payment') {
       const paymentId = data.id;
 
