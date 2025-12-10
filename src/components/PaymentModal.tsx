@@ -89,11 +89,11 @@ export const PaymentModal = ({ open, onOpenChange, paymentUrl, pixCode, pixImage
           setPaymentApproved(true);
           toast.success('Pagamento aprovado! Redirecionando...');
 
-          // Wait 2 seconds before redirecting
+          // Wait 3 seconds before redirecting
           setTimeout(() => {
             onOpenChange(false);
             navigate('/dashboard');
-          }, 2000);
+          }, 3000);
         }
       } catch (error) {
         console.error('Error checking payment status:', error);
@@ -127,8 +127,8 @@ export const PaymentModal = ({ open, onOpenChange, paymentUrl, pixCode, pixImage
             <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
               <div className="text-center space-y-4">
                 <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-                <h3 className="text-xl font-semibold">Pagamento Aprovado!</h3>
-                <p className="text-muted-foreground">Redirecionando para o dashboard...</p>
+                <h3 className="text-xl font-semibold">Pagamento confirmado com sucesso!</h3>
+                <p className="text-muted-foreground">Seus créditos já foram adicionados.</p>
               </div>
             </div>
           )}
