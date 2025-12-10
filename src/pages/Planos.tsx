@@ -75,7 +75,8 @@ const Planos = () => {
         body: {
           planId: selectedPlan,
           userId: user.id,
-          quantity: quantity
+          quantity: quantity,
+          returnUrl: window.location.origin + '/dashboard?payment=success'
         }
       });
 

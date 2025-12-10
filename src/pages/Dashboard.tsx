@@ -52,7 +52,7 @@ const Dashboard = () => {
 
     if (paymentStatus) {
       if (paymentStatus === 'success') {
-        toast.success('Pagamento realizado com sucesso! Atualizando sua conta...');
+        toast.success('Créditos adicionados com sucesso! Você já pode utilizar todos os recursos do sistema.');
         refetchSubscription();
 
         // Remove query param without reloading

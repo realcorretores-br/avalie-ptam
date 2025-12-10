@@ -86,8 +86,9 @@ serve(async (req: Request) => {
     console.log('Using payment gateway:', gateway.display_name);
 
     // Determine base URL for return/callback
-    const origin = req.headers.get('origin') || 'http://localhost:3000';
-    const returnUrl = `${origin}/dashboard?payment=success`;
+    // Prefer returnUrl passed from client, fallback to origin, then localhost
+    const origin = body.returnUrl ? new URL(body.returnUrl).origin : (req.headers.get('origin') || 'http://localhost:3000');
+    const returnUrl = body.returnUrl || `${origin}/dashboard?payment=success`;
     const cancelUrl = `${origin}/dashboard?payment=failure`;
 
     // Processar pagamento baseado no gateway ativo

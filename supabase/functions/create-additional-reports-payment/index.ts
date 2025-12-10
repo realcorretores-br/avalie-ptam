@@ -15,7 +15,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { purchaseId, userId, quantity, totalPrice, action } = await req.json();
+    const { purchaseId, userId, quantity, totalPrice, action, returnUrl: clientReturnUrl } = await req.json();
 
     console.log('Request received:', { action, purchaseId, userId });
 
@@ -148,8 +148,9 @@ serve(async (req: Request) => {
     console.log('Using payment gateway:', gateway.display_name);
 
     // Determine base URL for return/callback
-    const origin = req.headers.get('origin') || 'http://localhost:3000';
-    const returnUrl = `${origin}/dashboard?payment=success`;
+    // Prefer returnUrl passed from client, fallback to origin, then localhost
+    const origin = (clientReturnUrl ? new URL(clientReturnUrl).origin : null) || req.headers.get('origin') || 'http://localhost:3000';
+    const returnUrl = clientReturnUrl || `${origin}/dashboard?payment=success`;
     const cancelUrl = `${origin}/dashboard?payment=failure`;
 
     if (gateway.name === 'mercadopago') {
