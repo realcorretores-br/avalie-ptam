@@ -1,5 +1,6 @@
-
 // @ts-nocheck
+// Force redeploy: 2025-12-09
+// This is a Supabase Edge Function running on Deno runtime
 // This is a Supabase Edge Function running on Deno runtime
 // TypeScript errors are expected in IDE as it uses Node.js types
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
