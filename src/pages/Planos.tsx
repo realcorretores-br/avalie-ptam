@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Check, Building2, ArrowLeft, Star, Zap, Shield, Crown } from "lucide-react";
+import { AddCreditsModal } from "@/components/AddCreditsModal";
 import { Badge } from "@/components/ui/badge";
+import { Check, Building2, ArrowLeft, Star, Zap, Shield, Crown, Coins } from "lucide-react";
 
 interface Plan {
   id: string;
@@ -24,6 +25,7 @@ const Planos = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
 
   const handleContact = () => {
     toast.info("Entre em contato com nosso time comercial", {
@@ -130,10 +132,11 @@ const Planos = () => {
                       </ul>
                       <Button
                         size="lg"
-                        onClick={handleContact}
-                        className="w-full shadow-md hover:scale-[1.02] transition-transform"
+                        onClick={() => setShowCreditsModal(true)}
+                        className="w-full shadow-md hover:scale-[1.02] transition-transform gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                       >
-                        Falar com Consultor
+                        <Coins className="h-5 w-5" />
+                        Comprar agora
                       </Button>
                     </div>
                   </div>
@@ -221,6 +224,11 @@ const Planos = () => {
           </div>
         </div>
       </div>
+
+      <AddCreditsModal
+        open={showCreditsModal}
+        onOpenChange={setShowCreditsModal}
+      />
     </div>
   );
 };

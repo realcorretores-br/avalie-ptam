@@ -25,6 +25,7 @@ import { ThemeColorPicker } from "@/components/ThemeColorPicker";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { maskCPF, maskRG, maskCNPJ } from "@/lib/masks";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
+import { AddCreditsModal } from "@/components/AddCreditsModal";
 
 interface PaymentHistory {
   id: string;
@@ -60,6 +61,7 @@ const Perfil = () => {
   const [logoUrl, setLogoUrl] = useState((profile as any)?.logo_url || "");
   const [autoRenew, setAutoRenew] = useState(true);
   const [updatingAutoRenew, setUpdatingAutoRenew] = useState(false);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
 
   const [themeColor, setThemeColor] = useState(profile?.theme_color || "blue");
 
@@ -739,7 +741,13 @@ const Perfil = () => {
                     <Button variant="outline" onClick={() => navigate('/dashboard/planos')}>
                       Alterar Plano
                     </Button>
-
+                    <Button
+                      className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => setShowCreditsModal(true)}
+                    >
+                      <Coins className="h-4 w-4" />
+                      Comprar crédito avulso
+                    </Button>
                   </div>
                 </div>
               ) : (
@@ -825,6 +833,11 @@ const Perfil = () => {
       </div>
 
       {/* Add Reports Dialog removed */}
+
+      <AddCreditsModal
+        open={showCreditsModal}
+        onOpenChange={setShowCreditsModal}
+      />
     </div>
   );
 };

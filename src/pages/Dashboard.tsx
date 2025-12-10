@@ -17,19 +17,20 @@ import {
   Shield,
   Edit,
   Settings,
-  Gift
+  Gift,
+  Coins
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AddCreditsModal } from "@/components/AddCreditsModal";
 
 const Dashboard = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { subscription, hasActiveSubscription, loading: subLoading, refetch: refetchSubscription } = useSubscription();
   const { isAdmin } = useRole();
-
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
 
   // Enable realtime notifications
   useRealtimeNotifications();
@@ -45,6 +46,23 @@ const Dashboard = () => {
     }
   }, [user, isAdmin, navigate]);
 
+  // Handle payment return
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment');
+
+    if (paymentStatus) {
+      if (paymentStatus === 'success') {
+        toast.success('Pagamento iniciado! Seus créditos serão adicionados assim que confirmado.');
+        // Remove params
+        window.history.replaceState({}, '', window.location.pathname);
+      } else if (paymentStatus === 'failure') {
+        toast.error('Pagamento cancelado ou falhou.');
+      } else if (paymentStatus === 'pending') {
+        toast.info('Pagamento pendente. Aguarde a confirmação.');
+      }
+    }
+  }, []);
 
 
   const handleCreateNew = () => {
@@ -63,11 +81,6 @@ const Dashboard = () => {
   const welcomeTitle = hasActiveSubscription && subscription?.plans?.nome
     ? `Boas vindas ao ${subscription.plans.nome}`
     : "Boas vindas ao PTAM";
-
-  // Determine background color style
-  // If profile has a theme color, we could use it, but for now we'll stick to the primary class
-  // or inline style if available. The request says "A cor de fundo desse card é a mesma cor do sistema".
-  // We will use bg-primary which follows the system theme.
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -153,6 +166,16 @@ const Dashboard = () => {
                 </div>
 
                 <div className="space-y-3 mt-6">
+                  {!isAdmin && (
+                    <Button
+                      className="w-full justify-start gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => setShowCreditsModal(true)}
+                    >
+                      <Coins className="h-4 w-4" />
+                      Comprar crédito avulso
+                    </Button>
+                  )}
+
                   <Button
                     variant="outline"
                     className="w-full justify-start gap-2"
@@ -161,8 +184,6 @@ const Dashboard = () => {
                     <CreditCard className="h-4 w-4" />
                     Minha assinatura
                   </Button>
-
-
 
                   {/* Bonus Redemption */}
                   {!isAdmin && (profile as any)?.creditos_pendentes > 0 && (
@@ -340,7 +361,10 @@ const Dashboard = () => {
         </div>
       </div>
 
-
+      <AddCreditsModal
+        open={showCreditsModal}
+        onOpenChange={setShowCreditsModal}
+      />
     </div>
   );
 };

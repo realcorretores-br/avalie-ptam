@@ -13,7 +13,9 @@ import {
     Shield,
     AlertTriangle,
     History,
-    Settings
+    Settings,
+    Coins,
+    Wallet
 } from "lucide-react";
 import { useState } from "react";
 
@@ -23,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { useRole } from "@/hooks/useRole";
 import { supabase } from "@/integrations/supabase/client";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
+import { AddCreditsModal } from "@/components/AddCreditsModal";
 
 interface SidebarProps {
     className?: string;
@@ -35,6 +38,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
     const navigate = useNavigate();
     const searchParams = new URLSearchParams(location.search);
     const currentTab = searchParams.get('tab');
+    const [showCreditsModal, setShowCreditsModal] = useState(false);
 
     const [pendingErrorsCount, setPendingErrorsCount] = useState(0);
 
@@ -230,6 +234,20 @@ export const Sidebar = ({ className }: SidebarProps) => {
                             <Shield className="h-4 w-4" />
                             Painel Admin
                         </Link>
+
+                        <Link
+                            to="/dashboard/admin/gateways"
+                            className={cn(
+                                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                                isActive("/dashboard/admin/gateways")
+                                    ? "bg-primary/10 text-primary"
+                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                        >
+                            <Wallet className="h-4 w-4" />
+                            Gateway de Pagamento
+                        </Link>
+
                         <Link
                             to="/dashboard/admin/settings"
                             className={cn(
@@ -316,7 +334,15 @@ export const Sidebar = ({ className }: SidebarProps) => {
             <div className="p-4 border-t space-y-4">
                 <CreditDisplay hideReportsLine />
 
-
+                {!isAdmin && (
+                    <Button
+                        className="w-full justify-start gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={() => setShowCreditsModal(true)}
+                    >
+                        <Coins className="h-4 w-4" />
+                        Comprar crédito avulso
+                    </Button>
+                )}
 
                 <Button
                     variant="ghost"
@@ -328,6 +354,11 @@ export const Sidebar = ({ className }: SidebarProps) => {
                 </Button>
             </div >
 
+            <AddCreditsModal
+                open={showCreditsModal}
+                onOpenChange={setShowCreditsModal}
+            />
         </div >
     );
 };
+
