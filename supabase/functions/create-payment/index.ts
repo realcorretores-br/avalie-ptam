@@ -301,7 +301,7 @@ serve(async (req: Request) => {
         const errorString = JSON.stringify(paymentData);
 
         if (errorString.includes('domínio configurado')) {
-          throw new Error('Ocorreu um erro interno ao processar sua cobrança. Nossa equipe já foi notificada e está corrigindo isso. Tente novamente em alguns instantes.');
+          throw new Error('Neste momento não foi possível concluir a cobrança. Tente novamente em alguns instantes.');
         }
 
         throw new Error('Ocorreu um erro ao processar o pagamento com a operadora. Tente novamente.');
