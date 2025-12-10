@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Building2, Loader2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { PaymentModal } from "@/components/PaymentModal";
+
 
 interface Plan {
   id: string;
@@ -21,10 +21,7 @@ const SelecaoPlano = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState<string>('');
-  const [pixCode, setPixCode] = useState<string>('');
-  const [pixImage, setPixImage] = useState<string>('');
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -50,52 +47,20 @@ const SelecaoPlano = () => {
   const handleSelectPlan = async () => {
     if (!selectedPlan || !user) return;
 
-    setLoading(true);
+    const plan = plans.find(p => p.id === selectedPlan);
+    if (!plan) return;
 
-    try {
-      const plan = plans.find(p => p.id === selectedPlan);
-      if (!plan) return;
+    // Contact link for manual purchase since automated payments are disabled
+    const message = `Olá, tenho interesse no plano ${plan.nome}. Poderia me ajudar?`;
+    const whatsappUrl = `https://wa.me/5511999999999?text=${encodeURIComponent(message)}`; // Replace with actual support number if known, otherwise generic or toast
 
-      if (plan.tipo === 'personalizado') {
-        toast.info('Entre em contato conosco para planos personalizados');
-        setLoading(false);
-        return;
+    // Since we are removing payments, we can just redirect to WhatsApp or show a toast
+    toast.info("Para contratar este plano, entre em contato com nosso suporte.", {
+      action: {
+        label: "Falar no WhatsApp",
+        onClick: () => window.open(whatsappUrl, '_blank')
       }
-
-      // Criar preferência de pagamento no Mercado Pago via edge function
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
-          planId: selectedPlan,
-          userId: user.id,
-          userId: user.id
-        }
-      });
-
-      if (error) {
-        console.error('Payment error:', error);
-        toast.error("Erro de comunicação com o servidor.");
-      } else if (data?.error) {
-        // Erro retornado pela função (ex: CPF faltando)
-        toast.error(data.error);
-      } else if (data?.pix_code) {
-        // AbacatePay Direct PIX
-        setPaymentUrl(""); // Clear URL
-        setPixCode(data.pix_code);
-        setPixImage(data.pix_image);
-        setShowPaymentModal(true);
-      } else if (data?.init_point) {
-        // Mercado Pago Iframe
-        setPixCode("");
-        setPixImage("");
-        setPaymentUrl(data.init_point);
-        setShowPaymentModal(true);
-      }
-    } catch (error: any) {
-      console.error('Payment exception:', error);
-      toast.error('Erro ao processar pagamento');
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return (
@@ -146,18 +111,10 @@ const SelecaoPlano = () => {
             className="min-w-[200px]"
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Continuar para Pagamento
+            Falar com Consultor
           </Button>
         </div>
       </div>
-
-      <PaymentModal
-        open={showPaymentModal}
-        onOpenChange={setShowPaymentModal}
-        paymentUrl={paymentUrl}
-        pixCode={pixCode}
-        pixImage={pixImage}
-      />
     </div>
   );
 };

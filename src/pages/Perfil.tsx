@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AddReportsDialog } from "@/components/user/AddReportsDialog";
+
 import { ThemeColorPicker } from "@/components/ThemeColorPicker";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { maskCPF, maskRG, maskCNPJ } from "@/lib/masks";
@@ -60,7 +60,7 @@ const Perfil = () => {
   const [logoUrl, setLogoUrl] = useState((profile as any)?.logo_url || "");
   const [autoRenew, setAutoRenew] = useState(true);
   const [updatingAutoRenew, setUpdatingAutoRenew] = useState(false);
-  const [showAddReportsDialog, setShowAddReportsDialog] = useState(false);
+
   const [themeColor, setThemeColor] = useState(profile?.theme_color || "blue");
 
   useThemeColor();
@@ -230,32 +230,7 @@ const Perfil = () => {
     }
   };
 
-  const handlePayNow = async (payment: PaymentHistory) => {
-    if (!payment.payment_id) {
-      toast.error('ID de pagamento não encontrado');
-      return;
-    }
 
-    try {
-      // Buscar o gateway ativo
-      const { data: gateway } = await supabase
-        .from('payment_gateways')
-        .select('*')
-        .eq('is_active', true)
-        .single();
-
-      if (!gateway) {
-        toast.error('Nenhum gateway de pagamento configurado');
-        return;
-      }
-
-      // Redirecionar para o link de pagamento do Mercado Pago
-      window.open(`https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=${payment.payment_id}`, '_blank');
-    } catch (error) {
-      console.error('Error opening payment:', error);
-      toast.error('Erro ao abrir pagamento');
-    }
-  };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -764,13 +739,7 @@ const Perfil = () => {
                     <Button variant="outline" onClick={() => navigate('/dashboard/planos')}>
                       Alterar Plano
                     </Button>
-                    <Button
-                      onClick={() => setShowAddReportsDialog(true)}
-                      className="gap-2 bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <Coins className="h-4 w-4" />
-                      Adicionar Créditos Avulsos
-                    </Button>
+
                   </div>
                 </div>
               ) : (
@@ -836,15 +805,7 @@ const Perfil = () => {
                             : `${new Date(payment.data_inicio!).toLocaleDateString('pt-BR')} - ${new Date(payment.data_expiracao!).toLocaleDateString('pt-BR')}`}
                         </TableCell>
                         <TableCell>
-                          {payment.status === 'pending' && payment.payment_id && (
-                            <Button
-                              size="sm"
-                              onClick={() => handlePayNow(payment)}
-                              className="bg-primary hover:bg-primary/90"
-                            >
-                              Pagar Agora
-                            </Button>
-                          )}
+
                           {/* Se estiver expirado ou cancelado, não mostra nada */}
                         </TableCell>
                       </TableRow>
@@ -863,16 +824,7 @@ const Perfil = () => {
         </div>
       </div>
 
-      {/* Add Reports Dialog */}
-      <AddReportsDialog
-        open={showAddReportsDialog}
-        onOpenChange={setShowAddReportsDialog}
-        onSuccess={() => {
-          fetchPaymentHistory();
-          refetchSubscription();
-          refreshProfile();
-        }}
-      />
+      {/* Add Reports Dialog removed */}
     </div>
   );
 };

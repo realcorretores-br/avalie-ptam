@@ -6,10 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Check, Building2, ArrowLeft, Star, Zap, Shield, Crown } from "lucide-react";
-import { PaymentModal } from "@/components/PaymentModal";
-import { AddCreditsModal } from "@/components/AddCreditsModal";
 import { Badge } from "@/components/ui/badge";
-import { CpfCollectionDialog } from "@/components/CpfCollectionDialog";
 
 interface Plan {
   id: string;
@@ -22,16 +19,20 @@ interface Plan {
 }
 
 const Planos = () => {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState<string>('');
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showCreditsModal, setShowCreditsModal] = useState(false);
-  const [showCpfDialog, setShowCpfDialog] = useState(false);
-  const [pendingQuantity, setPendingQuantity] = useState(1);
+
+  const handleContact = () => {
+    toast.info("Entre em contato com nosso time comercial", {
+      action: {
+        label: "WhatsApp",
+        onClick: () => window.open("https://wa.me/5511999999999", "_blank")
+      }
+    });
+  };
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -41,69 +42,11 @@ const Planos = () => {
         .eq('ativo', true)
         .order('preco', { ascending: true });
 
-      if (data) setPlans(data);
+      if (data) setPlans(data as any);
     };
 
     fetchPlans();
   }, []);
-
-  const handleSelectPlan = async (quantity: number = 1) => {
-    if (!selectedPlan || !user) return;
-
-    // Check for CPF
-    if (!profile?.cpf) {
-      setPendingQuantity(quantity);
-      setShowCpfDialog(true);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const plan = plans.find(p => p.id === selectedPlan);
-
-      if (!plan) {
-        toast.error('Plano não encontrado');
-        return;
-      }
-
-      if (plan.tipo === 'personalizado') {
-        toast.info('Entre em contato para planos personalizados');
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
-          planId: selectedPlan,
-          userId: user.id,
-          quantity: quantity,
-          quantity: quantity
-        }
-      });
-
-      if (error) throw error;
-
-      if (data.init_point) {
-        setPaymentUrl(data.init_point);
-        setShowPaymentModal(true);
-        setShowCreditsModal(false);
-      }
-    } catch (error: any) {
-      console.error('Payment error:', error);
-      toast.error('Erro ao processar pagamento. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBuyCredits = (planId: string) => {
-    setSelectedPlan(planId);
-    setShowCreditsModal(true);
-  };
-
-  const getSelectedPlanPrice = () => {
-    const plan = plans.find(p => p.id === selectedPlan);
-    return plan ? plan.preco : 0;
-  };
 
   const getPlanIcon = (tipo: string) => {
     switch (tipo) {
@@ -187,10 +130,10 @@ const Planos = () => {
                       </ul>
                       <Button
                         size="lg"
-                        onClick={() => handleBuyCredits(plan.id)}
+                        onClick={handleContact}
                         className="w-full shadow-md hover:scale-[1.02] transition-transform"
                       >
-                        Comprar Créditos
+                        Falar com Consultor
                       </Button>
                     </div>
                   </div>
@@ -266,11 +209,10 @@ const Planos = () => {
                       className="w-full"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedPlan(plan.id);
-                        handleSelectPlan(1);
+                        handleContact();
                       }}
                     >
-                      {loading && selectedPlan === plan.id ? 'Processando...' : 'Assinar Agora'}
+                      Falar com Consultor
                     </Button>
                   </CardFooter>
                 </Card>
@@ -279,26 +221,6 @@ const Planos = () => {
           </div>
         </div>
       </div>
-
-      <AddCreditsModal
-        open={showCreditsModal}
-        onOpenChange={setShowCreditsModal}
-        unitPrice={getSelectedPlanPrice()}
-        onConfirm={(quantity) => handleSelectPlan(quantity)}
-        loading={loading}
-      />
-
-      <PaymentModal
-        open={showPaymentModal}
-        onOpenChange={setShowPaymentModal}
-        paymentUrl={paymentUrl}
-      />
-
-      <CpfCollectionDialog
-        open={showCpfDialog}
-        onOpenChange={setShowCpfDialog}
-        onSuccess={() => handleSelectPlan(pendingQuantity)}
-      />
     </div>
   );
 };

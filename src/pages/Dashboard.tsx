@@ -20,7 +20,7 @@ import {
   Gift
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { AddReportsDialog } from "@/components/user/AddReportsDialog";
+
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -29,7 +29,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { subscription, hasActiveSubscription, loading: subLoading, refetch: refetchSubscription } = useSubscription();
   const { isAdmin } = useRole();
-  const [showAddReportsDialog, setShowAddReportsDialog] = useState(false);
+
 
   // Enable realtime notifications
   useRealtimeNotifications();
@@ -45,47 +45,7 @@ const Dashboard = () => {
     }
   }, [user, isAdmin, navigate]);
 
-  // Handle payment return
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const paymentStatus = params.get('payment');
-    const paymentId = params.get('payment_id') || params.get('collection_id');
 
-    if (paymentStatus) {
-      if (paymentStatus === 'success') {
-        toast.success('Créditos adicionados com sucesso! Você já pode utilizar todos os recursos do sistema.');
-        refetchSubscription();
-        window.history.replaceState({}, '', window.location.pathname);
-      } else if (paymentStatus === 'pending') {
-        // Optimistic check: Maybe it IS approved now?
-        if (paymentId) {
-          const toastId = toast.loading('Verificando status do pagamento...');
-
-          supabase.functions.invoke('check-payment', {
-            body: { paymentId: paymentId }
-          }).then(({ data, error }) => {
-            toast.dismiss(toastId);
-            if (!error && data?.status === 'approved') {
-              toast.success('Pagamento confirmado! Seus créditos foram adicionados.');
-              refetchSubscription();
-              window.history.replaceState({}, '', window.location.pathname);
-            } else {
-              console.error('Payment check failed:', data);
-              toast.info(data?.error || 'Pagamento em processamento. Aguarde alguns instantes.');
-            }
-          }).catch((err) => {
-            console.error('Payment check invocation failed:', err);
-            toast.dismiss(toastId);
-            toast.info('Pagamento em processamento. Aguarde a confirmação.');
-          });
-        } else {
-          toast.info('Pagamento em processamento. Aguarde a confirmação.');
-        }
-      } else if (paymentStatus === 'failure') {
-        toast.error('O pagamento falhou ou foi cancelado.');
-      }
-    }
-  }, [refetchSubscription]);
 
   const handleCreateNew = () => {
     if (!hasActiveSubscription && !isAdmin) {
@@ -202,15 +162,7 @@ const Dashboard = () => {
                     Minha assinatura
                   </Button>
 
-                  {!isAdmin && (
-                    <Button
-                      className="w-full justify-start gap-2"
-                      onClick={() => setShowAddReportsDialog(true)}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Adicionar Créditos Avulsos
-                    </Button>
-                  )}
+
 
                   {/* Bonus Redemption */}
                   {!isAdmin && (profile as any)?.creditos_pendentes > 0 && (
@@ -388,14 +340,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Add Reports Dialog */}
-      <AddReportsDialog
-        open={showAddReportsDialog}
-        onOpenChange={setShowAddReportsDialog}
-        onSuccess={() => {
-          // Refresh subscription data or show success message
-        }}
-      />
+
     </div>
   );
 };

@@ -166,6 +166,9 @@ export const PTAMForm = () => {
   useEffect(() => {
     if (!user || !formData || Object.keys(formData).length === 0) return;
 
+    // Don't auto-save if we are in the middle of blocking navigation (exit confirmation)
+    if (blocker.state === "blocked") return;
+
     const autoSave = async () => {
       try {
         // Incluir currentSection no form_data para persistência entre navegadores
@@ -223,7 +226,7 @@ export const PTAMForm = () => {
 
     const timeoutId = setTimeout(autoSave, 2000);
     return () => clearTimeout(timeoutId);
-  }, [formData, user, draftId, currentSection]); // Added currentSection dependency
+  }, [formData, user, draftId, currentSection, blocker.state]); // Added blocker.state dependency
 
   const handleTemplateSelect = (templateData: any) => {
     if (Object.keys(templateData).length > 0) {

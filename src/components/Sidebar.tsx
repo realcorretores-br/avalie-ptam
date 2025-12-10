@@ -16,7 +16,7 @@ import {
     Settings
 } from "lucide-react";
 import { useState } from "react";
-import { AddReportsDialog } from "@/components/user/AddReportsDialog";
+
 import { Button } from "@/components/ui/button";
 import { CreditDisplay } from "@/components/CreditDisplay";
 import { cn } from "@/lib/utils";
@@ -35,7 +35,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
     const navigate = useNavigate();
     const searchParams = new URLSearchParams(location.search);
     const currentTab = searchParams.get('tab');
-    const [showAddReportsDialog, setShowAddReportsDialog] = useState(false);
+
     const [pendingErrorsCount, setPendingErrorsCount] = useState(0);
 
     // Attempt to refresh profile if it's missing but user is logged in
@@ -266,18 +266,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
                             <Receipt className="h-4 w-4" />
                             CMS Planos
                         </Link>
-                        <Link
-                            to="/dashboard/admin/gateways"
-                            className={cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                                isActive("/dashboard/admin/gateways")
-                                    ? "bg-primary/10 text-primary"
-                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                            )}
-                        >
-                            <CreditCard className="h-4 w-4" />
-                            Gateway de Pagamento
-                        </Link>
+
                         <Link
                             to="/dashboard/admin/templates"
                             className={cn(
@@ -327,15 +316,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
             <div className="p-4 border-t space-y-4">
                 <CreditDisplay hideReportsLine />
 
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full gap-2"
-                    onClick={() => setShowAddReportsDialog(true)}
-                >
-                    <PlusCircle className="h-4 w-4" />
-                    Adicionar créditos avulso
-                </Button>
+
 
                 <Button
                     variant="ghost"
@@ -346,13 +327,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
                     Sair da conta
                 </Button>
             </div >
-            <AddReportsDialog
-                open={showAddReportsDialog}
-                onOpenChange={setShowAddReportsDialog}
-                onSuccess={() => {
-                    refreshProfile();
-                }}
-            />
+
         </div >
     );
 };

@@ -27,7 +27,7 @@ import Planos from "./pages/Planos";
 import Perfil from "./pages/Perfil";
 import Admin from "./pages/Admin";
 import AdminCMS from "./pages/AdminCMS";
-import AdminPaymentGateways from "./pages/AdminPaymentGateways";
+
 import AdminTemplates from "./pages/AdminTemplates";
 import AdminLogs from "./pages/admin/AdminLogs";
 import ContentManagement from "./pages/ContentManagement";
@@ -96,7 +96,7 @@ const router = createBrowserRouter([
             children: [
               { path: "admin", element: <Admin /> },
               { path: "admin/cms", element: <AdminCMS /> },
-              { path: "admin/gateways", element: <AdminPaymentGateways /> },
+
               { path: "admin/templates", element: <AdminTemplates /> },
               { path: "admin/logs", element: <AdminLogs /> },
               { path: "admin/erros", element: <ErrosReportados /> },
