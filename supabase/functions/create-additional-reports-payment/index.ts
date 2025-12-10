@@ -45,6 +45,7 @@ serve(async (req: Request) => {
       }
 
       // Get active payment gateway
+      /*
       const { data: gateway, error: gatewayError } = await supabase
         .from('payment_gateways')
         .select('*')
@@ -52,11 +53,18 @@ serve(async (req: Request) => {
         .maybeSingle();
 
       if (gatewayError || !gateway) throw new Error('No active payment gateway found');
+      */
+      const gateway = {
+        name: 'mercadopago',
+        display_name: 'Mercado Pago',
+        config: { access_token_key: 'HARDCODED' }
+      };
 
       let paymentStatus = 'pending';
 
       if (gateway.name === 'mercadopago') {
-        const accessToken = Deno.env.get(gateway.config.access_token_key);
+        // User provided hardcoded credentials
+        const accessToken = 'APP_USR-4196436067933490-102406-f5fbb599bd45ccd66aad2fe22e8829dd-287066595';
         if (!accessToken) throw new Error('Mercado Pago access token not found');
 
         // Check by payment_id if available
@@ -134,6 +142,8 @@ serve(async (req: Request) => {
     }
 
     // Get active payment gateway
+    // FORCE SWITCH TO MERCADO PAGO (Bypassing DB check)
+    /*
     const { data: gateway, error: gatewayError } = await supabase
       .from('payment_gateways')
       .select('*')
@@ -144,8 +154,14 @@ serve(async (req: Request) => {
       console.error('Error fetching payment gateway:', gatewayError);
       throw new Error('No active payment gateway found');
     }
+    */
+    const gateway = {
+      name: 'mercadopago',
+      display_name: 'Mercado Pago',
+      config: { access_token_key: 'HARDCODED' }
+    };
 
-    console.log('Using payment gateway:', gateway.display_name);
+    console.log('Using payment gateway (FORCED):', gateway.display_name);
 
     // Determine base URL for return/callback - STRICT DOMAIN ENFORCEMENT
     // User requirement: "Utilizar um domínio estático e oficial definido em variável de ambiente, como ASASAAS_DOMAIN"
@@ -156,7 +172,8 @@ serve(async (req: Request) => {
     const cancelUrl = `${origin}/dashboard?payment=failure`;
 
     if (gateway.name === 'mercadopago') {
-      const accessToken = Deno.env.get(gateway.config.access_token_key);
+      // User provided hardcoded credentials
+      const accessToken = 'APP_USR-4196436067933490-102406-f5fbb599bd45ccd66aad2fe22e8829dd-287066595';
       if (!accessToken) {
         throw new Error(`Secret ${gateway.config.access_token_key} não configurado`);
       }
