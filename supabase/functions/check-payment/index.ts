@@ -44,14 +44,13 @@ serve(async (req: Request) => {
             );
         }
 
-        // Get active payment gateway to get the token
-        const { data: gateway, error: gatewayError } = await supabase
-            .from('payment_gateways')
-            .select('*')
-            .eq('is_active', true)
-            .maybeSingle();
+        // FORCE SWITCH TO MERCADO PAGO for check-payment
+        const gateway = {
+            name: 'mercadopago',
+            config: { access_token_key: 'HARDCODED' }
+        };
 
-        if (gatewayError || !gateway) {
+        if (!gateway) {
             throw new Error('No active payment gateway found');
         }
 
@@ -59,7 +58,8 @@ serve(async (req: Request) => {
         let paymentData = null;
 
         if (gateway.name === 'mercadopago') {
-            const accessToken = Deno.env.get(gateway.config.access_token_key);
+            // User provided hardcoded credentials
+            const accessToken = 'APP_USR-4196436067933490-102406-f5fbb599bd45ccd66aad2fe22e8829dd-287066595';
             if (!accessToken) {
                 throw new Error('Mercado Pago access token not found');
             }

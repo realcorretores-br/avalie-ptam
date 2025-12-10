@@ -62,6 +62,19 @@ export const PaymentModal = ({ open, onOpenChange, paymentUrl, pixCode, pixImage
     // Poll for payment status every 3 seconds
     const checkPaymentStatus = async () => {
       try {
+        // Active Polling: Check status via Edge Function (Real-time check with Gateway)
+        if (initialPurchaseId) {
+          const { data: checkData, error: checkError } = await supabase.functions.invoke('check-payment', {
+            body: { purchaseId: initialPurchaseId }
+          });
+          if (!checkError && checkData?.status === 'approved') {
+            // DB update happens in edge function, so next DB poll should catch it, 
+            // but we can also short-circuit if the function says approved.
+            console.log('Payment approved via Active Check');
+          }
+        }
+
+        // Standard DB Poll (reads what webhook OR active check updated)
         const { data: subscription } = await supabase
           .from('subscriptions')
           .select('payment_status, payment_id')
