@@ -8,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Save, RefreshCw, AlertTriangle } from "lucide-react";
-import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface PaymentGateway {
@@ -162,129 +161,125 @@ const AdminPaymentGateways = () => {
 
     if (loading) {
         return (
-            <DashboardLayout>
-                <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-            </DashboardLayout>
+            <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
         );
     }
 
     return (
-        <DashboardLayout>
-            <div className="space-y-6">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Gateways de Pagamento</h2>
-                    <p className="text-muted-foreground">
-                        Gerencie as integrações de pagamento do sistema.
-                    </p>
-                </div>
-
-                <Alert>
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Atenção</AlertTitle>
-                    <AlertDescription>
-                        Certifique-se de que as credenciais estão corretas antes de ativar um gateway.
-                        Credenciais inválidas impedirão que os usuários realizem pagamentos.
-                    </AlertDescription>
-                </Alert>
-
-                <div className="grid gap-6">
-                    {gateways.map((gateway, index) => (
-                        <Card key={gateway.id}>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <div className="space-y-1">
-                                    <CardTitle className="capitalize">{gateway.name}</CardTitle>
-                                    <CardDescription>
-                                        {gateway.is_active ? 'Gateway Ativo' : 'Gateway Inativo'}
-                                    </CardDescription>
-                                </div>
-                                <Switch
-                                    checked={gateway.is_active}
-                                    onCheckedChange={(checked) => handleUpdateGateway(index, 'is_active', checked)}
-                                />
-                            </CardHeader>
-                            <CardContent className="space-y-4 pt-4">
-                                {gateway.name === 'mercadopago' && (
-                                    <>
-                                        <div className="space-y-2">
-                                            <Label>Public Key</Label>
-                                            <Input
-                                                value={gateway.config.public_key || ''}
-                                                onChange={(e) => handleUpdateGateway(index, 'public_key', e.target.value)}
-                                                type="text"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Access Token</Label>
-                                            <Input
-                                                value={gateway.config.access_token || ''}
-                                                onChange={(e) => handleUpdateGateway(index, 'access_token', e.target.value)}
-                                                type="password"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Client ID</Label>
-                                            <Input
-                                                value={gateway.config.client_id || ''}
-                                                onChange={(e) => handleUpdateGateway(index, 'client_id', e.target.value)}
-                                                type="text"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Client Secret</Label>
-                                            <Input
-                                                value={gateway.config.client_secret || ''}
-                                                onChange={(e) => handleUpdateGateway(index, 'client_secret', e.target.value)}
-                                                type="password"
-                                            />
-                                        </div>
-                                    </>
-                                )}
-                                {/* Fallback for other gateways if added later */}
-                                {gateway.name !== 'mercadopago' && (
-                                    <div className="p-4 bg-muted rounded-md text-sm text-center">
-                                        Configurações específicas para este gateway ainda não implementadas na UI. Indique json direto no banco se necessário.
-                                    </div>
-                                )}
-
-                                <div className="pt-4 flex justify-end">
-                                    <Button onClick={() => handleSave(gateway)} disabled={saving} className="gap-2">
-                                        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                                        <Save className="h-4 w-4" />
-                                        Salvar Alterações
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-
-                    {gateways.length === 0 && (
-                        <div className="text-center py-10 text-muted-foreground">
-                            Nenhum gateway encontrado.
-                            <div className="flex flex-col items-center gap-4 mt-4">
-                                <Button variant="outline" onClick={fetchGateways} className="gap-2">
-                                    <RefreshCw className="h-4 w-4" />
-                                    Recarregar
-                                </Button>
-                                <Separator className="w-[100px]" />
-                                <Button
-                                    onClick={initializeMercadoPago}
-                                    disabled={saving}
-                                    className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                                >
-                                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    Inicializar Mercado Pago
-                                </Button>
-                                <p className="text-xs text-muted-foreground max-w-sm">
-                                    Se a migração falhou, clique acima para criar a configuração inicial do Mercado Pago no banco de dados.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                </div>
+        <div className="space-y-6">
+            <div>
+                <h2 className="text-3xl font-bold tracking-tight">Gateways de Pagamento</h2>
+                <p className="text-muted-foreground">
+                    Gerencie as integrações de pagamento do sistema.
+                </p>
             </div>
-        </DashboardLayout>
+
+            <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Atenção</AlertTitle>
+                <AlertDescription>
+                    Certifique-se de que as credenciais estão corretas antes de ativar um gateway.
+                    Credenciais inválidas impedirão que os usuários realizem pagamentos.
+                </AlertDescription>
+            </Alert>
+
+            <div className="grid gap-6">
+                {gateways.map((gateway, index) => (
+                    <Card key={gateway.id}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <div className="space-y-1">
+                                <CardTitle className="capitalize">{gateway.name}</CardTitle>
+                                <CardDescription>
+                                    {gateway.is_active ? 'Gateway Ativo' : 'Gateway Inativo'}
+                                </CardDescription>
+                            </div>
+                            <Switch
+                                checked={gateway.is_active}
+                                onCheckedChange={(checked) => handleUpdateGateway(index, 'is_active', checked)}
+                            />
+                        </CardHeader>
+                        <CardContent className="space-y-4 pt-4">
+                            {gateway.name === 'mercadopago' && (
+                                <>
+                                    <div className="space-y-2">
+                                        <Label>Public Key</Label>
+                                        <Input
+                                            value={gateway.config.public_key || ''}
+                                            onChange={(e) => handleUpdateGateway(index, 'public_key', e.target.value)}
+                                            type="text"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Access Token</Label>
+                                        <Input
+                                            value={gateway.config.access_token || ''}
+                                            onChange={(e) => handleUpdateGateway(index, 'access_token', e.target.value)}
+                                            type="password"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Client ID</Label>
+                                        <Input
+                                            value={gateway.config.client_id || ''}
+                                            onChange={(e) => handleUpdateGateway(index, 'client_id', e.target.value)}
+                                            type="text"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Client Secret</Label>
+                                        <Input
+                                            value={gateway.config.client_secret || ''}
+                                            onChange={(e) => handleUpdateGateway(index, 'client_secret', e.target.value)}
+                                            type="password"
+                                        />
+                                    </div>
+                                </>
+                            )}
+                            {/* Fallback for other gateways if added later */}
+                            {gateway.name !== 'mercadopago' && (
+                                <div className="p-4 bg-muted rounded-md text-sm text-center">
+                                    Configurações específicas para este gateway ainda não implementadas na UI. Indique json direto no banco se necessário.
+                                </div>
+                            )}
+
+                            <div className="pt-4 flex justify-end">
+                                <Button onClick={() => handleSave(gateway)} disabled={saving} className="gap-2">
+                                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                                    <Save className="h-4 w-4" />
+                                    Salvar Alterações
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+
+                {gateways.length === 0 && (
+                    <div className="text-center py-10 text-muted-foreground">
+                        Nenhum gateway encontrado.
+                        <div className="flex flex-col items-center gap-4 mt-4">
+                            <Button variant="outline" onClick={fetchGateways} className="gap-2">
+                                <RefreshCw className="h-4 w-4" />
+                                Recarregar
+                            </Button>
+                            <Separator className="w-[100px]" />
+                            <Button
+                                onClick={initializeMercadoPago}
+                                disabled={saving}
+                                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                                Inicializar Mercado Pago
+                            </Button>
+                            <p className="text-xs text-muted-foreground max-w-sm">
+                                Se a migração falhou, clique acima para criar a configuração inicial do Mercado Pago no banco de dados.
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
     );
 };
 
