@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import { useEffect, useState, useCallback } from "react";
-=======
-import { useEffect, useState } from "react";
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -122,29 +118,8 @@ const Perfil = () => {
     }
   }, [profile]);
 
-<<<<<<< HEAD
 
-=======
-  useEffect(() => {
-    if (user) {
-      fetchPaymentHistory();
-      fetchAutoRenewStatus();
-    }
-  }, [user]);
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
-
-  useEffect(() => {
-    const tab = searchParams.get('tab') as Tab;
-    if (tab && ['perfil', 'assinatura', 'pagamentos', 'anotacoes'].includes(tab)) {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
-
-<<<<<<< HEAD
   const fetchAutoRenewStatus = useCallback(async () => {
-=======
-  const fetchAutoRenewStatus = async () => {
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     if (!user) return;
 
     try {
@@ -162,11 +137,7 @@ const Perfil = () => {
     } catch (error) {
       console.error('Error fetching auto-renew status:', error);
     }
-<<<<<<< HEAD
   }, [user]);
-=======
-  };
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   const handleToggleAutoRenew = async (enabled: boolean) => {
     if (!user || !subscription) return;
@@ -195,11 +166,7 @@ const Perfil = () => {
     }
   };
 
-<<<<<<< HEAD
   const fetchPaymentHistory = useCallback(async () => {
-=======
-  const fetchPaymentHistory = async () => {
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     if (!user) return;
 
     try {
@@ -250,7 +217,6 @@ const Perfil = () => {
     } catch (error) {
       console.error('Error fetching payment history:', error);
     }
-<<<<<<< HEAD
   }, [user]);
 
   useEffect(() => {
@@ -259,9 +225,6 @@ const Perfil = () => {
       fetchAutoRenewStatus();
     }
   }, [user, fetchPaymentHistory, fetchAutoRenewStatus]);
-=======
-  };
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
 
 
@@ -729,7 +692,6 @@ const Perfil = () => {
                     <p className="text-lg font-medium">{(subscription as any).plans?.nome}</p>
                   </div>
                   <div>
-<<<<<<< HEAD
                     <div className="grid grid-cols-2 gap-4">
                       <div className="p-3 bg-muted rounded-lg">
                         <Label className="text-xs text-muted-foreground">Créditos do Plano</Label>
@@ -751,13 +713,6 @@ const Perfil = () => {
                         </p>
                       </div>
                     </div>
-=======
-                    <Label>Relatórios Disponíveis</Label>
-                    <p className="text-lg font-medium">
-                      {subscription.relatorios_disponiveis - subscription.relatorios_usados} de{' '}
-                      {subscription.relatorios_disponiveis}
-                    </p>
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
                   </div>
 
                   {/* Only show expiration date for non-avulso plans */}
@@ -806,10 +761,8 @@ const Perfil = () => {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">
-                    Você não possui um plano ativo
-                  </p>
+                <div className="text-center py-6">
+                  <p className="text-lg font-medium mb-4">Você ainda não possui um plano ativo</p>
                   <Button onClick={() => navigate('/dashboard/planos')}>
                     Ver Planos Disponíveis
                   </Button>
@@ -823,71 +776,63 @@ const Perfil = () => {
             <Card className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <Receipt className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">Histórico de Pagamentos</h2>
+                <h2 className="text-xl font-semibold">Histórico de Pagamento</h2>
               </div>
-              {paymentHistory.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">
-                  Nenhum pagamento realizado ainda
-                </p>
-              ) : (
+              <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Data</TableHead>
-                      <TableHead>Plano</TableHead>
+                      <TableHead>Item</TableHead>
                       <TableHead>Valor</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Período</TableHead>
-                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paymentHistory.map((payment) => (
-                      <TableRow key={payment.id}>
-                        <TableCell>
-                          {new Date(payment.created_at).toLocaleDateString('pt-BR')}
-                        </TableCell>
-                        <TableCell>
-                          {payment.type === 'additional_reports'
-                            ? `${payment.quantidade} Relatório${payment.quantidade! > 1 ? 's' : ''} Avulso${payment.quantidade! > 1 ? 's' : ''}`
-                            : payment.plans?.nome}
-                        </TableCell>
-                        <TableCell>
-                          R$ {payment.type === 'additional_reports'
-                            ? payment.preco_total?.toFixed(2)
-                            : payment.plans?.preco.toFixed(2)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={`${getStatusColor(payment.status)} text-white border-none`}>
-                            {getStatusLabel(payment.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {payment.type === 'additional_reports'
-                            ? 'Créditos Avulsos'
-                            : `${new Date(payment.data_inicio!).toLocaleDateString('pt-BR')} - ${new Date(payment.data_expiracao!).toLocaleDateString('pt-BR')}`}
-                        </TableCell>
-                        <TableCell>
-
-                          {/* Se estiver expirado ou cancelado, não mostra nada */}
+                    {paymentHistory.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                          Nenhum pagamento encontrado.
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      paymentHistory.map((payment) => (
+                        <TableRow key={payment.id || payment.payment_id}>
+                          <TableCell>
+                            {new Date(payment.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell>
+                            {payment.type === 'additional_reports'
+                              ? `${payment.quantidade} Créditos Avulsos`
+                              : payment.plans?.nome || 'Assinatura'}
+                          </TableCell>
+                          <TableCell>
+                            {payment.type === 'additional_reports'
+                              ? `R$ ${payment.preco_total?.toFixed(2) || '0.00'}`
+                              : `R$ ${payment.plans?.preco?.toFixed(2) || '0.00'}`}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`${getStatusColor(payment.status)} text-white border-0`}>
+                              {getStatusLabel(payment.status)}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
-              )}
+              </div>
             </Card>
           )}
 
           {/* Anotações Tab */}
           {activeTab === 'anotacoes' && settings.enable_notes && (
-            <Anotacoes />
+            <div className="space-y-4">
+              <Anotacoes />
+            </div>
           )}
-
         </div>
       </div>
-
-      {/* Add Reports Dialog removed */}
 
       <AddCreditsModal
         open={showCreditsModal}
