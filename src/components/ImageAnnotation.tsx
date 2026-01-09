@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Canvas as FabricCanvas, PencilBrush, Circle, Rect, Textbox } from "fabric";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+<<<<<<< HEAD
 import {
   Pencil,
   Square,
@@ -9,6 +10,15 @@ import {
   Type,
   Eraser,
   Undo,
+=======
+import { 
+  Pencil, 
+  Square, 
+  Circle as CircleIcon, 
+  Type, 
+  Eraser, 
+  Undo, 
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
   Redo,
   Download,
   X
@@ -43,7 +53,11 @@ export const ImageAnnotation = ({ imageUrl, onSave, onCancel }: ImageAnnotationP
       const scale = Math.min(800 / img.width, 600 / img.height);
       canvas.setWidth(img.width * scale);
       canvas.setHeight(img.height * scale);
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
       const { FabricImage } = await import("fabric");
       const fabricImg = new FabricImage(img, {
         scaleX: scale,
@@ -57,7 +71,11 @@ export const ImageAnnotation = ({ imageUrl, onSave, onCancel }: ImageAnnotationP
 
     // Initialize drawing brush
     const brush = new PencilBrush(canvas);
+<<<<<<< HEAD
     brush.color = "#FF0000"; // Start with default, let effect update it
+=======
+    brush.color = activeColor;
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     brush.width = 3;
     canvas.freeDrawingBrush = brush;
 
@@ -72,7 +90,11 @@ export const ImageAnnotation = ({ imageUrl, onSave, onCancel }: ImageAnnotationP
     if (!fabricCanvas) return;
 
     fabricCanvas.isDrawingMode = activeTool === "draw";
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     if (activeTool === "draw" && fabricCanvas.freeDrawingBrush) {
       fabricCanvas.freeDrawingBrush.color = activeColor;
       fabricCanvas.freeDrawingBrush.width = 3;
@@ -141,13 +163,21 @@ export const ImageAnnotation = ({ imageUrl, onSave, onCancel }: ImageAnnotationP
 
   const handleSave = () => {
     if (!fabricCanvas) return;
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     const dataURL = fabricCanvas.toDataURL({
       format: "png",
       quality: 1,
       multiplier: 1,
     });
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     onSave(dataURL);
     toast("Imagem anotada salva com sucesso!");
   };
@@ -235,8 +265,14 @@ export const ImageAnnotation = ({ imageUrl, onSave, onCancel }: ImageAnnotationP
               {colors.map((color) => (
                 <button
                   key={color}
+<<<<<<< HEAD
                   className={`w-8 h-8 rounded border-2 ${activeColor === color ? "border-primary" : "border-border"
                     }`}
+=======
+                  className={`w-8 h-8 rounded border-2 ${
+                    activeColor === color ? "border-primary" : "border-border"
+                  }`}
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
                   style={{ backgroundColor: color }}
                   onClick={() => setActiveColor(color)}
                 />

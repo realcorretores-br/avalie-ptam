@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { MercadoPagoConfig, Preference } from 'https://esm.sh/mercadopago@2.0.4';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -8,20 +7,33 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+    // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
         return new Response(null, { headers: corsHeaders });
     }
 
     try {
+        console.log("Starting create-payment function");
         const supabase = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
 
-        const { userId, quantity, planId } = await req.json();
+        // Get request body safely
+        let body;
+        try {
+            body = await req.json();
+        } catch (e) {
+            console.error("Error parsing JSON:", e);
+            throw new Error("Invalid request body");
+        }
+
+        const { userId, quantity, planId } = body;
+        console.log(`Processing payment for User: ${userId}, Quantity: ${quantity}, Plan: ${planId}`);
 
         if (!userId || !quantity) {
-            throw new Error('Missing required params');
+            console.error("Missing required params");
+            throw new Error('Missing required params: userId and quantity are mandatory');
         }
 
         // 1. Get Active Gateway Config
@@ -33,87 +45,105 @@ serve(async (req) => {
             .single();
 
         if (gatewayError || !gateway) {
+            console.error("Gateway configuration error:", gatewayError);
             throw new Error('Mercado Pago gateway not active or configured');
         }
 
         const config = gateway.config;
-        const client = new MercadoPagoConfig({ accessToken: config.access_token });
-        const preference = new Preference(client);
+        // Verify we have an access token
+        if (!config.access_token) {
+            throw new Error('Mercado Pago Access Token is missing in configuration');
+        }
 
-        // 2. Calculate Price (Fetch 'avulso' plan or use fixed logic based on prompt)
-        // The prompt implies "Avulso", usually tied to a plan price. Let's fetch the plan.
-        let unitPrice = 29.90; // Default fallback
+        // 2. Calculate Price
+        let unitPrice = 29.90;
         let planName = 'Crédito Avulso';
 
+        // Fetch plan details to ensure we have correct price
         if (planId) {
             const { data: plan } = await supabase.from('plans').select('preco, nome').eq('id', planId).single();
             if (plan) {
-                unitPrice = plan.preco;
+                unitPrice = Number(plan.preco);
                 planName = plan.nome;
             }
         } else {
-            // Try to find the default 'avulso' plan
             const { data: plan } = await supabase.from('plans').select('preco, nome').eq('tipo', 'avulso').eq('ativo', true).single();
             if (plan) {
-                unitPrice = plan.preco;
+                unitPrice = Number(plan.preco);
                 planName = plan.nome;
             }
         }
 
-        const totalAmount = unitPrice * quantity;
+        console.log(`Price configuration - Unit: ${unitPrice}, Quantity: ${quantity}, Total: ${unitPrice * quantity}`);
 
-        // 3. Create Preference
+        // 3. Create Preference using direct API call (replacing SDK)
         const preferenceData = {
             items: [
                 {
                     id: planId || 'avulso',
                     title: `${planName} (x${quantity})`,
-                    quantity: 1, // We sell a "bundle" of X credits as 1 item to MP, or we could pass quantity. Let's pass 1 item with total price to be safe with unit logic? No, MP handles quantity * unit_price. 
-                    // Let's use quantity properly.
-                    quantity: quantity,
+                    quantity: Number(quantity),
                     currency_id: 'BRL',
-                    unit_price: unitPrice
+                    unit_price: Number(unitPrice)
                 }
             ],
-            payer: {
-                // We could fetch user email if needed, but MP allows guest checkout or asks email there.
-                // Better execution: fetch user email.
-            },
             external_reference: JSON.stringify({
                 user_id: userId,
-                quantity: quantity,
+                quantity: Number(quantity),
                 type: 'credits'
             }),
             auto_return: 'approved',
             back_urls: {
-                success: `${Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '')}/dashboard?payment=success`,
-                failure: `${Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '')}/dashboard?payment=failure`,
-                pending: `${Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '')}/dashboard?payment=pending`
+                success: `${req.headers.get('origin')}/payment-success-popup`,
+                failure: `${req.headers.get('origin')}/payment-success-popup?status=failure`,
+                pending: `${req.headers.get('origin')}/payment-success-popup?status=pending`
             },
             notification_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/mp-webhook`
         };
 
         // Add Payer info if possible
         const { data: profile } = await supabase.from('profiles').select('email, nome_completo').eq('id', userId).single();
-        if (profile) {
+        if (profile && profile.email) {
             (preferenceData as any).payer = {
                 email: profile.email,
-                name: profile.nome_completo
+                name: profile.nome_completo || 'Usuario'
             }
         }
 
-        const result = await preference.create({ body: preferenceData });
+        console.log("Creating MP preference via API...");
+
+        const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.access_token}`
+            },
+            body: JSON.stringify(preferenceData)
+        });
+
+        if (!mpResponse.ok) {
+            const errorText = await mpResponse.text();
+            console.error('Mercado Pago API Error:', mpResponse.status, errorText);
+            throw new Error(`Mercado Pago API failed: ${errorText}`);
+        }
+
+        const result = await mpResponse.json();
+        console.log("MP Preference created successfully:", result.id);
 
         return new Response(
             JSON.stringify({ init_point: result.init_point, id: result.id }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
 
-    } catch (error) {
-        console.error('Payment error:', error);
+    } catch (error: any) {
+        console.error('Payment processing error:', error);
+
         return new Response(
-            JSON.stringify({ error: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({
+                error: error.message || 'Unknown error',
+                details: error
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }
 });

@@ -38,7 +38,11 @@ export const Avaliador = ({ data, updateData }: AvaliadorProps) => {
       if (profile.cau) setShowCAU(true);
       if (profile.crea) setShowCREA(true);
     }
+<<<<<<< HEAD
   }, [profile, data.avaliadorNome, updateData]);
+=======
+  }, [profile]);
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
 
   return (

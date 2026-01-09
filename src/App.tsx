@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +15,7 @@ import { DashboardLayout } from "@/layouts/DashboardLayout";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
+import { PaymentSuccessPopup } from "./components/PaymentSuccessPopup";
 
 import SelecaoPlano from "./pages/SelecaoPlano";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -113,6 +115,7 @@ const router = createBrowserRouter([
           { path: "tutoriais", element: <VideosTutoriais /> },
         ]
       },
+      { path: "/payment-success-popup", element: <PaymentSuccessPopup /> },
       { path: "*", element: <NotFound /> }
     ]
   }

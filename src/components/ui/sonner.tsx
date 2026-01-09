@@ -24,5 +24,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
   );
 };
 
+<<<<<<< HEAD
 // eslint-disable-next-line react-refresh/only-export-components
+=======
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 export { Toaster, toast };

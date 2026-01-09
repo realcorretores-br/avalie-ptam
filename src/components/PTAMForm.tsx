@@ -336,7 +336,7 @@ export const PTAMForm = () => {
       const isAvulso = (subscription.plans as any)?.tipo === 'avulso';
       const isExpired = !isAvulso && subscription.data_expiracao && new Date(subscription.data_expiracao) < new Date();
 
-      const planRemaining = isExpired ? 0 : Math.max(0, subscription.relatorios_disponiveis - subscription.relatorios_usados);
+      const planRemaining = isExpired ? 0 : Math.max(0, (subscription.relatorios_disponiveis || 0) - (subscription.relatorios_usados || 0));
       const extraRemaining = subscription.creditos_extra || 0;
 
       if (planRemaining <= 0 && extraRemaining <= 0) {
@@ -364,7 +364,7 @@ export const PTAMForm = () => {
         const { error: updateError } = await supabase
           .from('subscriptions')
           .update({
-            relatorios_usados: subscription.relatorios_usados + 1,
+            relatorios_usados: (subscription.relatorios_usados || 0) + 1,
             updated_at: new Date().toISOString()
           })
           .eq('id', subscription.id);
@@ -382,7 +382,6 @@ export const PTAMForm = () => {
 
         if (updateError) throw updateError;
       }
-
 
       setIsFinalized(true);
       // Clear local storage on success

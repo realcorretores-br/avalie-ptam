@@ -73,10 +73,10 @@ const AdminPaymentGateways = () => {
                     display_name: 'Mercado Pago',
                     is_active: true,
                     config: {
-                        public_key: 'APP_USR-1a1eaee9-9823-4462-8792-0d46fd19517b',
-                        access_token: 'APP_USR-4196436067933490-102406-f5fbb599bd45ccd66aad2fe22e8829dd-287066595',
-                        client_id: '4196436067933490',
-                        client_secret: 'GwBQ1ZyHhtnRAyiJTy3KFw6FWEqreW7h'
+                        public_key: 'APP_USR-5c547d52-b64a-44af-9f6a-415ee420fc81',
+                        access_token: 'APP_USR-7660842038965384-112610-8750f878c986ca3bc91d45b62d7d4ee7-287066595',
+                        client_id: '7660842038965384',
+                        client_secret: 'mpIX8JwOlW33Ijp7dnY3LE7cPcHFwZbF'
                     }
                 });
 

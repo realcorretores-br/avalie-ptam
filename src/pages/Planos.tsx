@@ -228,6 +228,7 @@ const Planos = () => {
       <AddCreditsModal
         open={showCreditsModal}
         onOpenChange={setShowCreditsModal}
+        onSuccess={() => window.location.reload()}
       />
     </div>
   );

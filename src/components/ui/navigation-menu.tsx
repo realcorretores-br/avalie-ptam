@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 /* eslint-disable react-refresh/only-export-components */
+=======
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 import * as React from "react";
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu";
 import { cva } from "class-variance-authority";

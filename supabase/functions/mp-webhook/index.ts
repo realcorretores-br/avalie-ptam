@@ -1,17 +1,14 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { MercadoPagoConfig, Payment } from 'https://esm.sh/mercadopago@2.0.4';
 
 serve(async (req) => {
-    const url = new URL(req.url); // Use URL to parse query params if needed
-
     try {
         const supabase = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
 
-        // Get Active Gateway Config for MP
+        // Get Active Gateway Config
         const { data: gateway } = await supabase
             .from('payment_gateways')
             .select('config')
@@ -19,24 +16,38 @@ serve(async (req) => {
             .eq('is_active', true)
             .single();
 
-        if (!gateway) {
-            throw new Error('Gateway config not found');
+        if (!gateway || !gateway.config.access_token) {
+            throw new Error('Gateway config invalid');
         }
-
-        const client = new MercadoPagoConfig({ accessToken: gateway.config.access_token });
-        const payment = new Payment(client);
 
         const body = await req.json();
         const { type, data } = body;
 
+        console.log("Webhook received:", { type, id: data?.id });
+
         if (type === 'payment') {
-            const paymentData = await payment.get({ id: data.id });
+            // 1. Fetch Payment Details from Mercado Pago API
+            const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${gateway.config.access_token}`
+                }
+            });
+
+            if (!mpResponse.ok) {
+                console.error("MP API Error:", await mpResponse.text());
+                throw new Error("Failed to fetch payment details");
+            }
+
+            const paymentData = await mpResponse.json();
+            console.log("Payment status:", paymentData.status);
 
             if (paymentData.status === 'approved') {
                 const metadata = JSON.parse(paymentData.external_reference);
                 const { user_id, quantity } = metadata;
 
-                // Idempotency Check: Check if this payment ID was already processed
+                console.log("Processing approved payment for user:", user_id, "qty:", quantity);
+
+                // 2. Idempotency Check
                 const { data: existing } = await supabase
                     .from('additional_reports_purchases')
                     .select('id')
@@ -44,47 +55,65 @@ serve(async (req) => {
                     .single();
 
                 if (existing) {
+                    console.log("Payment already processed:", data.id);
                     return new Response(JSON.stringify({ message: 'Already processed' }), { status: 200 });
                 }
 
-                // 1. Add Credits Record
+                // 3. Record Purchase
                 const { error: purchaseError } = await supabase
                     .from('additional_reports_purchases')
                     .insert({
                         user_id: user_id,
-                        quantidade: quantity,
+                        quantidade: Number(quantity),
                         preco_total: paymentData.transaction_amount,
                         payment_id: String(data.id),
                         payment_status: 'approved'
                     });
 
-                if (purchaseError) throw purchaseError;
-
-                // 2. Update Profile Credits (Fetch current, add new)
-                const { data: profile } = await supabase.from('subscriptions').select('relatorios_disponiveis, id').eq('user_id', user_id).eq('status', 'active').single();
-
-                // If user has subscription, add to it. If not, add to 'creditos_avulsos' in profile or handle differently.
-                // Simplified Logic: The prompt says "Add to user balance".
-                // The current system uses `subscriptions.relatorios_disponiveis` OR `profiles`? 
-                // Admin previously used `additional_reports_purchases` logic.
-                // Let's assume we update the active subscription if exists, or just log the purchase.
-                // Wait, "check-payment" previously updated `subscriptions`.
-
-                // Let's UPDATE the `subscriptions` table directly if an active sub exists, 
-                // OR if not, we might need a "lifetime/avulso" mechanism.
-                // Assuming user ALWAYS has a subscription row (even free/trial/avulso container).
-
-                if (profile) {
-                    await supabase.from('subscriptions')
-                        .update({
-                            relatorios_disponiveis: profile.relatorios_disponiveis + quantity
-                        })
-                        .eq('id', profile.id);
-                } else {
-                    // Fallback: If no active subscription, maybe update a profile field?
-                    // System seems to rely on subscriptions.
+                if (purchaseError) {
+                    console.error("Error inserting purchase:", purchaseError);
+                    throw purchaseError;
                 }
 
+                // 4. Update Subscription/Credits
+                // First check if user has an active subscription row
+                const { data: subscription } = await supabase
+                    .from('subscriptions')
+                    .select('id, relatorios_disponiveis, creditos_extra')
+                    .eq('user_id', user_id)
+                    .single();
+
+                const isCreditPurchase = metadata.type === 'credits';
+
+                if (subscription) {
+                    let updateData = {};
+                    let newBalance = 0;
+
+                    if (isCreditPurchase) {
+                        // Update EXTRA CREDITS (Avulso)
+                        newBalance = (subscription.creditos_extra || 0) + Number(quantity);
+                        updateData = { creditos_extra: newBalance };
+                        console.log("Updating Extra Credits (Avulso). New Balance:", newBalance);
+                    } else {
+                        // Update PLAN CREDITS
+                        newBalance = (subscription.relatorios_disponiveis || 0) + Number(quantity);
+                        updateData = { relatorios_disponiveis: newBalance };
+                        console.log("Updating Plan Credits. New Balance:", newBalance);
+                    }
+
+                    const { error: updateError } = await supabase
+                        .from('subscriptions')
+                        .update(updateData)
+                        .eq('id', subscription.id);
+
+                    if (updateError) {
+                        console.error("Error updating subscription:", updateError);
+                        throw updateError;
+                    }
+                } else {
+                    console.warn("No subscription found for user:", user_id);
+                    // Handle edge case if needed
+                }
             }
         }
 

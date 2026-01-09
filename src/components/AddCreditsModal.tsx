@@ -11,10 +11,11 @@ import { useAuth } from "@/hooks/useAuth";
 interface AddCreditsModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    unitPrice?: number; // Optional, can fetch if not provided
+    unitPrice?: number;
+    onSuccess?: () => void;
 }
 
-export function AddCreditsModal({ open, onOpenChange, unitPrice: initialUnitPrice }: AddCreditsModalProps) {
+export function AddCreditsModal({ open, onOpenChange, unitPrice: initialUnitPrice, onSuccess }: AddCreditsModalProps) {
     const { user } = useAuth();
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -36,6 +37,7 @@ export function AddCreditsModal({ open, onOpenChange, unitPrice: initialUnitPric
         setLoading(true);
 
         try {
+            console.log("Invoking create-payment with:", { userId: user.id, quantity, planId: null });
             const { data, error } = await supabase.functions.invoke('create-payment', {
                 body: {
                     userId: user.id,
@@ -44,12 +46,46 @@ export function AddCreditsModal({ open, onOpenChange, unitPrice: initialUnitPric
                 }
             });
 
-            if (error) throw error;
-            if (data.error) throw new Error(data.error);
+            console.log("Invoke result:", { data, error });
 
+            if (error) throw error;
             if (data.init_point) {
-                // Redirect to MP
-                window.location.href = data.init_point;
+                console.log("Opening Checkout Modal:", data.init_point);
+
+                // Force open in a new popup window with specific dimensions
+                // We rely PURELY on window.open to guarantee a popup experience.
+                const width = 1000;
+                const height = 700;
+                const left = (window.screen.width - width) / 2;
+                const top = (window.screen.height - height) / 2;
+
+                window.open(
+                    data.init_point,
+                    'MercadoPagoCheckout',
+                    `width=${width},height=${height},top=${top},left=${left},status=no,toolbar=no,menubar=no,location=yes,scrollbars=yes`
+                );
+
+                // Listen for success message from popup/iframe
+                const handleMessage = (event: MessageEvent) => {
+                    if (event.origin !== window.location.origin) return;
+
+                    if (event.data?.type === 'PAYMENT_SUCCESS') {
+                        console.log("Payment Success Message Received!");
+                        toast.success("Pagamento confirmado com sucesso!");
+
+                        onOpenChange(false); // Close the Shadcn modal
+                        if (onSuccess) onSuccess(); // Trigger credit refresh
+
+                        window.removeEventListener('message', handleMessage);
+                    } else if (event.data?.type === 'PAYMENT_FAILURE') {
+                        toast.error("Pagamento não concluído.");
+                        window.removeEventListener('message', handleMessage);
+                    }
+                };
+                window.addEventListener('message', handleMessage);
+
+            } else {
+                throw new Error('Nenhum link de pagamento retornado');
             }
         } catch (error: any) {
             console.error('Purchase error:', error);

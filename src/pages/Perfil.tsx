@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { useEffect, useState, useCallback } from "react";
+=======
+import { useEffect, useState } from "react";
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -118,7 +122,16 @@ const Perfil = () => {
     }
   }, [profile]);
 
+<<<<<<< HEAD
 
+=======
+  useEffect(() => {
+    if (user) {
+      fetchPaymentHistory();
+      fetchAutoRenewStatus();
+    }
+  }, [user]);
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   useEffect(() => {
     const tab = searchParams.get('tab') as Tab;
@@ -127,7 +140,11 @@ const Perfil = () => {
     }
   }, [searchParams]);
 
+<<<<<<< HEAD
   const fetchAutoRenewStatus = useCallback(async () => {
+=======
+  const fetchAutoRenewStatus = async () => {
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     if (!user) return;
 
     try {
@@ -145,7 +162,11 @@ const Perfil = () => {
     } catch (error) {
       console.error('Error fetching auto-renew status:', error);
     }
+<<<<<<< HEAD
   }, [user]);
+=======
+  };
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   const handleToggleAutoRenew = async (enabled: boolean) => {
     if (!user || !subscription) return;
@@ -174,7 +195,11 @@ const Perfil = () => {
     }
   };
 
+<<<<<<< HEAD
   const fetchPaymentHistory = useCallback(async () => {
+=======
+  const fetchPaymentHistory = async () => {
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     if (!user) return;
 
     try {
@@ -225,6 +250,7 @@ const Perfil = () => {
     } catch (error) {
       console.error('Error fetching payment history:', error);
     }
+<<<<<<< HEAD
   }, [user]);
 
   useEffect(() => {
@@ -233,6 +259,9 @@ const Perfil = () => {
       fetchAutoRenewStatus();
     }
   }, [user, fetchPaymentHistory, fetchAutoRenewStatus]);
+=======
+  };
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
 
 
@@ -700,6 +729,7 @@ const Perfil = () => {
                     <p className="text-lg font-medium">{(subscription as any).plans?.nome}</p>
                   </div>
                   <div>
+<<<<<<< HEAD
                     <div className="grid grid-cols-2 gap-4">
                       <div className="p-3 bg-muted rounded-lg">
                         <Label className="text-xs text-muted-foreground">Créditos do Plano</Label>
@@ -721,6 +751,13 @@ const Perfil = () => {
                         </p>
                       </div>
                     </div>
+=======
+                    <Label>Relatórios Disponíveis</Label>
+                    <p className="text-lg font-medium">
+                      {subscription.relatorios_disponiveis - subscription.relatorios_usados} de{' '}
+                      {subscription.relatorios_disponiveis}
+                    </p>
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
                   </div>
 
                   {/* Only show expiration date for non-avulso plans */}

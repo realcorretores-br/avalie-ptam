@@ -51,18 +51,25 @@ export const useSubscription = () => {
           )
         `)
         .eq('user_id', user.id)
-        .eq('status', 'active')
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (error) throw error;
 
       // For avulso plans with no expiration date, always consider active
-      // For avulso plans with no expiration date, always consider active
       const isAvulso = (data as unknown as Subscription)?.plans?.tipo === 'avulso';
       const hasExpiration = data?.data_expiracao;
 
       setSubscription(data as unknown as Subscription);
-      setHasActiveSubscription(!!data && (isAvulso || !hasExpiration || new Date(data.data_expiracao) > new Date()));
+
+      // Allow access if:
+      // 1. Is Avulso plan (no expiry)
+      // 2. Has valid expiration date (future)
+      // 3. OR Has available credits (relatorios_disponiveis OR creditos_extra)
+      const hasPlanCredits = (data?.relatorios_disponiveis || 0) > 0;
+      const hasExtraCredits = (data?.creditos_extra || 0) > 0;
+
+      setHasActiveSubscription(!!data && (hasPlanCredits || hasExtraCredits || isAvulso || !hasExpiration || new Date(data.data_expiracao) > new Date()));
     } catch (error) {
       console.error('Error fetching subscription:', error);
       setHasActiveSubscription(false);

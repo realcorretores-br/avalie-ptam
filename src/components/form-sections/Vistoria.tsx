@@ -24,7 +24,11 @@ export const Vistoria = ({ data, updateData }: VistoriaProps) => {
     if (data.situacaoImovel && !validSituacoes.includes(data.situacaoImovel)) {
       updateData({ situacaoImovel: '' });
     }
+<<<<<<< HEAD
   }, [data.dataVistoria, data.situacaoImovel, updateData]);
+=======
+  }, []);
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   return (
     <div className="space-y-4">

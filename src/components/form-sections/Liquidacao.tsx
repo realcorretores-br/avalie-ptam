@@ -16,12 +16,20 @@ export const Liquidacao = ({ data, updateData }: LiquidacaoProps) => {
   useEffect(() => {
     const valorFinal = parseFloat(data.valorFinal?.replace(/[^\d,]/g, "").replace(",", ".") || "0");
     const percentual = parseFloat(data.percentualLiquidacao || "80");
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     if (valorFinal && percentual) {
       const valorLiq = (valorFinal * (percentual / 100)).toFixed(2);
       updateData({ valorLiquidacao: valorLiq.replace(".", ",") });
     }
+<<<<<<< HEAD
   }, [data.valorFinal, data.percentualLiquidacao, updateData]);
+=======
+  }, [data.valorFinal, data.percentualLiquidacao]);
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   const handleConvertToWords = () => {
     if (!data.valorLiquidacao) {
@@ -35,7 +43,11 @@ export const Liquidacao = ({ data, updateData }: LiquidacaoProps) => {
 
     const extenso = numberToWords(data.valorLiquidacao);
     updateData({ valorLiquidacaoExtenso: extenso });
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     toast({
       title: "Convertido!",
       description: "Valor convertido para extenso com sucesso.",
@@ -79,9 +91,15 @@ export const Liquidacao = ({ data, updateData }: LiquidacaoProps) => {
             <Label htmlFor="valorLiquidacaoExtenso">
               Valor de Liquidação por Extenso <span className="text-destructive">*</span>
             </Label>
+<<<<<<< HEAD
             <Button
               type="button"
               variant="outline"
+=======
+            <Button 
+              type="button" 
+              variant="outline" 
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
               size="sm"
               onClick={handleConvertToWords}
             >

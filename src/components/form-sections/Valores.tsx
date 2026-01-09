@@ -19,7 +19,11 @@ export const Valores = ({ data, updateData }: ValoresProps) => {
   // Gerar descrição para venda
   const descricaoVenda = useMemo(() => {
     const parts: string[] = [];
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     if (data.tipoImovel) {
       const imovelMap: Record<string, string> = {
         'apartamento': 'Apartamento',
@@ -31,22 +35,36 @@ export const Valores = ({ data, updateData }: ValoresProps) => {
       };
       parts.push("Imóvel tipo " + (imovelMap[data.tipoImovel] || data.tipoImovel));
     }
+<<<<<<< HEAD
 
     parts.push("à venda");
 
+=======
+    
+    parts.push("à venda");
+    
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     const details: string[] = [];
     if (data.quartos) details.push(`${data.quartos} quartos`);
     if (data.banheiros) details.push(`${data.banheiros} banheiros`);
     if (data.suites) details.push(`${data.suites} suítes`);
     if (data.vagas) details.push(`${data.vagas} vagas na garagem`);
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     return parts.join(" ") + (details.length ? ", " + details.join(", ") : "") + ".";
   }, [data.tipoImovel, data.tipoImovelOutro, data.quartos, data.banheiros, data.suites, data.vagas]);
 
   // Gerar descrição para locação
   const descricaoLocacao = useMemo(() => {
     const parts: string[] = [];
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     if (data.tipoImovel) {
       const imovelMap: Record<string, string> = {
         'apartamento': 'Apartamento',
@@ -58,15 +76,25 @@ export const Valores = ({ data, updateData }: ValoresProps) => {
       };
       parts.push("Imóvel tipo " + (imovelMap[data.tipoImovel] || data.tipoImovel));
     }
+<<<<<<< HEAD
 
     parts.push("para locação");
 
+=======
+    
+    parts.push("para locação");
+    
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     const details: string[] = [];
     if (data.quartos) details.push(`${data.quartos} quartos`);
     if (data.banheiros) details.push(`${data.banheiros} banheiros`);
     if (data.suites) details.push(`${data.suites} suítes`);
     if (data.vagas) details.push(`${data.vagas} vagas na garagem`);
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     return parts.join(" ") + (details.length ? ", " + details.join(", ") : "") + ".";
   }, [data.tipoImovel, data.tipoImovelOutro, data.quartos, data.banheiros, data.suites, data.vagas]);
 
@@ -75,7 +103,11 @@ export const Valores = ({ data, updateData }: ValoresProps) => {
     const v1 = currencyToNumber(data.valorComparativo || "0");
     const v2 = currencyToNumber(data.valorEvolutivo || "0");
     const v3 = currencyToNumber(data.valorCapitalizacao || "0");
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     const a1 = currencyToNumber(data.aluguelComparativo || "0");
     const a2 = currencyToNumber(data.aluguelEvolutivo || "0");
     const a3 = currencyToNumber(data.aluguelCapitalizacao || "0");
@@ -97,8 +129,13 @@ export const Valores = ({ data, updateData }: ValoresProps) => {
     } else {
       updateData({ aluguelMedio: "" });
     }
+<<<<<<< HEAD
   }, [data.valorComparativo, data.valorEvolutivo, data.valorCapitalizacao,
   data.aluguelComparativo, data.aluguelEvolutivo, data.aluguelCapitalizacao, updateData]);
+=======
+  }, [data.valorComparativo, data.valorEvolutivo, data.valorCapitalizacao, 
+      data.aluguelComparativo, data.aluguelEvolutivo, data.aluguelCapitalizacao]);
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   return (
     <div className="space-y-4">
@@ -114,8 +151,13 @@ export const Valores = ({ data, updateData }: ValoresProps) => {
             <h3 className="font-semibold">Método Comparativo Direto por Homogeneização por Fatores</h3>
             <div className="flex gap-2">
               <DescriptionPopup description={descricaoVenda} />
+<<<<<<< HEAD
               <ComparativeCalculator
                 onImport={(value) => updateData({ valorComparativo: value })}
+=======
+              <ComparativeCalculator 
+                onImport={(value) => updateData({ valorComparativo: value })} 
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
                 areaConstruida={data.areaConstruida || ""}
                 transactionType="venda"
               />
@@ -149,7 +191,11 @@ export const Valores = ({ data, updateData }: ValoresProps) => {
             <div className="flex gap-2">
               <StateSelector />
               <CUBCalculator
+<<<<<<< HEAD
                 onImport={(value) => updateData({ valorEvolutivo: value })}
+=======
+                onImport={(value) => updateData({ valorEvolutivo: value })} 
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
                 areaConstruida={data.areaConstruida || ""}
               />
             </div>
@@ -181,12 +227,21 @@ export const Valores = ({ data, updateData }: ValoresProps) => {
             <h3 className="font-semibold">Método Capitalização da Renda</h3>
             <div className="flex gap-2">
               <DescriptionPopup description={descricaoLocacao} />
+<<<<<<< HEAD
               <CapitalizationComparativeCalculator
                 onImport={(value) => updateData({ aluguelCapitalizacao: value })}
                 areaConstruida={data.areaConstruida || ""}
               />
               <CapitalizationCalculator
                 onImport={(value) => updateData({ valorCapitalizacao: value })}
+=======
+              <CapitalizationComparativeCalculator 
+                onImport={(value) => updateData({ aluguelCapitalizacao: value })} 
+                areaConstruida={data.areaConstruida || ""}
+              />
+              <CapitalizationCalculator 
+                onImport={(value) => updateData({ valorCapitalizacao: value })} 
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
                 aluguelCapitalizacao={data.aluguelCapitalizacao || ""}
               />
             </div>

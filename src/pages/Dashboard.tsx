@@ -66,11 +66,25 @@ const Dashboard = () => {
 
 
   const handleCreateNew = () => {
-    if (!hasActiveSubscription && !isAdmin) {
-      toast.error('Assine um plano para criar avaliações');
+    // Calculate total available credits
+    const planCredits = subscription?.relatorios_disponiveis || 0;
+    const planUsed = subscription?.relatorios_usados || 0;
+    const extraCredits = subscription?.creditos_extra || 0;
+
+    // Check plan expiration
+    const isAvulso = subscription?.plans?.tipo === 'avulso';
+    const hasExpiration = subscription?.data_expiracao;
+    const isExpired = !isAvulso && hasExpiration && new Date(subscription.data_expiracao) < new Date();
+
+    const planRemaining = isExpired ? 0 : Math.max(0, planCredits - planUsed);
+    const totalAvailable = planRemaining + extraCredits;
+
+    if (!hasActiveSubscription && !isAdmin && totalAvailable <= 0) {
+      toast.error('Assine um plano ou compre créditos para criar avaliações');
       return;
     }
-    if (!isAdmin && subscription && subscription.relatorios_usados >= subscription.relatorios_disponiveis) {
+
+    if (!isAdmin && subscription && totalAvailable <= 0) {
       toast.error('Você não tem créditos disponíveis. Adicione mais créditos para criar uma nova avaliação.');
       return;
     }
@@ -143,235 +157,248 @@ const Dashboard = () => {
                       </p>
                       <div className="flex items-baseline gap-1">
                         <span className="text-3xl font-bold text-foreground">
-                          {isAdmin ? "∞" : subscription ? (() => {
-                            const isAvulso = subscription.plans?.tipo === 'avulso';
-                            const hasExpiration = subscription.data_expiracao;
-                            const isExpired = !isAvulso && hasExpiration && new Date(subscription.data_expiracao) < new Date();
-                            const planRemaining = isExpired ? 0 : Math.max(0, subscription.relatorios_disponiveis - subscription.relatorios_usados);
-                            return planRemaining + (subscription.creditos_extra || 0);
-                          })() : 0}
-                        </span>
+<<<<<<< HEAD
+  {
+    isAdmin ? "∞" : subscription ? (() => {
+      const isAvulso = subscription.plans?.tipo === 'avulso';
+      const hasExpiration = subscription.data_expiracao;
+      const isExpired = !isAvulso && hasExpiration && new Date(subscription.data_expiracao) < new Date();
+      const planRemaining = isExpired ? 0 : Math.max(0, subscription.relatorios_disponiveis - subscription.relatorios_usados);
+      return planRemaining + (subscription.creditos_extra || 0);
+    })() : 0
+  }
+                        </span >
                         <span className="text-sm text-muted-foreground">
                           Total disponível
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+=======
+                          {isAdmin ? "∞" : subscription ? (subscription.relatorios_disponiveis - subscription.relatorios_usados) : 0}
+  </span>
+  <span className="text-sm text-muted-foreground">
+    de {isAdmin ? "∞" : subscription?.relatorios_disponiveis || 0}
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
+  </span>
+                      </div >
+                    </div >
+                  </div >
 
-                  {/* Progress Bar */}
-                  {!isAdmin && subscription && (
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full bg-primary transition-all duration-300"
-                        style={{
-                          width: `${Math.min(((subscription.relatorios_usados / subscription.relatorios_disponiveis) * 100), 100)}%`
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3 mt-6">
-                  {!isAdmin && (
-                    <Button
-                      className="w-full justify-start gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                      onClick={() => setShowCreditsModal(true)}
-                    >
-                      <Coins className="h-4 w-4" />
-                      Comprar crédito avulso
-                    </Button>
-                  )}
-
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2"
-                    onClick={() => navigate('/dashboard/perfil?tab=assinatura')}
-                  >
-                    <CreditCard className="h-4 w-4" />
-                    Minha assinatura
-                  </Button>
-
-                  {/* Bonus Redemption */}
-                  {!isAdmin && (profile as any)?.creditos_pendentes > 0 && (
-                    <Button
-                      className="w-full justify-start gap-2 bg-green-600 hover:bg-green-700 text-white"
-                      onClick={async () => {
-                        try {
-                          const loadingToast = toast.loading('Resgatando bônus...');
-                          const pending = (profile as any).creditos_pendentes;
-
-                          // 1. Create Purchase Record
-                          const { error: purchaseError } = await supabase
-                            .from('additional_reports_purchases')
-                            .insert({
-                              user_id: user?.id,
-                              preco_total: 0, // Bonus has no cost
-                              quantidade: pending,
-                              payment_status: 'approved',
-                              payment_id: `bonus_${Date.now()}`
-                            } as any);
-
-                          if (purchaseError) throw purchaseError;
-
-                          // 2. Decrement Pending Credits
-                          const { error: updateError } = await supabase
-                            .from('profiles')
-                            .update({ creditos_pendentes: 0 } as any)
-                            .eq('id', user?.id);
-
-                          if (updateError) throw updateError;
-
-                          toast.dismiss(loadingToast);
-                          toast.success(`${pending} crédito(s) resgatado(s) com sucesso!`);
-
-                          // Force refresh
-                          window.location.reload();
-                        } catch (error) {
-                          console.error(error);
-                          toast.error('Erro ao resgatar bônus');
-                        }
-                      }}
-                    >
-                      <Gift className="h-4 w-4" />
-                      Resgatar {((profile as any)?.creditos_pendentes || 0)} Bônus
-                    </Button>
-                  )}
-                </div>
-              </>
-            )}
-          </Card>
-        </div>
-
-        {/* Action Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-
-          {/* Avaliações Salvas */}
-          <Card
-            className="p-6 hover:shadow-lg transition-all cursor-pointer group border-border"
-            onClick={() => navigate('/dashboard/avaliacoes')}
-          >
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-blue-50 group-hover:bg-blue-100 transition-colors">
-                <FileText className="h-8 w-8 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-1">Avaliações Salvas</h3>
-                <p className="text-sm text-muted-foreground">
-                  Ver histórico de laudos criados
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          {/* Métricas */}
-          <Card
-            className="p-6 hover:shadow-lg transition-all cursor-pointer group border-border"
-            onClick={() => navigate('/dashboard/metricas')}
-          >
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-purple-50 group-hover:bg-purple-100 transition-colors">
-                <TrendingUp className="h-8 w-8 text-purple-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-1">Métricas</h3>
-                <p className="text-sm text-muted-foreground">
-                  Ver estatísticas e desempenho
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          {/* Vídeos Tutoriais */}
-          <Card
-            className="p-6 hover:shadow-lg transition-all cursor-pointer group border-border"
-            onClick={() => navigate('/dashboard/tutoriais')}
-          >
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-indigo-50 group-hover:bg-indigo-100 transition-colors">
-                <Video className="h-8 w-8 text-indigo-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-1">Vídeos Tutoriais</h3>
-                <p className="text-sm text-muted-foreground">
-                  Aprenda a usar a plataforma
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          {/* Reportar Erro */}
-          <Card
-            className="p-6 hover:shadow-lg transition-all cursor-pointer group border-border"
-            onClick={() => navigate('/dashboard/reportar-erro')}
-          >
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-red-50 group-hover:bg-red-100 transition-colors">
-                <AlertTriangle className="h-8 w-8 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-1">Reportar Erro</h3>
-                <p className="text-sm text-muted-foreground">
-                  Relatar problemas ou bugs
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          {/* Admin Cards (Only visible to admins) */}
-          {isAdmin && (
-            <>
-              <Card className="p-6 hover:shadow-lg transition-all cursor-pointer group border-primary/20" onClick={() => navigate('/dashboard/admin')}>
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                    <Shield className="h-8 w-8 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold mb-1">Painel Admin</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Gerenciar usuários e planos
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-6 hover:shadow-lg transition-all cursor-pointer group border-primary/20" onClick={() => navigate('/dashboard/conteudo')}>
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                    <Edit className="h-8 w-8 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold mb-1">Gerenciar Conteúdo</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Editar landing page e vídeos
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-6 hover:shadow-lg transition-all cursor-pointer group border-primary/20" onClick={() => navigate('/dashboard/admin/cms')}>
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                    <Settings className="h-8 w-8 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold mb-1">CMS Planos</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Editar planos e preços
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </>
-          )}
-
-        </div>
-      </div>
-
-      <AddCreditsModal
-        open={showCreditsModal}
-        onOpenChange={setShowCreditsModal}
+  {/* Progress Bar */ }
+{
+  !isAdmin && subscription && (
+    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div
+        className="h-full bg-primary transition-all duration-300"
+        style={{
+          width: `${Math.min(((subscription.relatorios_usados / subscription.relatorios_disponiveis) * 100), 100)}%`
+        }}
       />
     </div>
+  )
+}
+                </div >
+
+  <div className="space-y-3 mt-6">
+    {!isAdmin && (
+      <Button
+        className="w-full justify-start gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+        onClick={() => setShowCreditsModal(true)}
+      >
+        <Coins className="h-4 w-4" />
+        Comprar crédito avulso
+      </Button>
+    )}
+
+    <Button
+      variant="outline"
+      className="w-full justify-start gap-2"
+      onClick={() => navigate('/dashboard/perfil?tab=assinatura')}
+    >
+      <CreditCard className="h-4 w-4" />
+      Minha assinatura
+    </Button>
+
+    {/* Bonus Redemption */}
+    {!isAdmin && (profile as any)?.creditos_pendentes > 0 && (
+      <Button
+        className="w-full justify-start gap-2 bg-green-600 hover:bg-green-700 text-white"
+        onClick={async () => {
+          try {
+            const loadingToast = toast.loading('Resgatando bônus...');
+            const pending = (profile as any).creditos_pendentes;
+
+            // 1. Create Purchase Record
+            const { error: purchaseError } = await supabase
+              .from('additional_reports_purchases')
+              .insert({
+                user_id: user?.id,
+                preco_total: 0, // Bonus has no cost
+                quantidade: pending,
+                payment_status: 'approved',
+                payment_id: `bonus_${Date.now()}`
+              } as any);
+
+            if (purchaseError) throw purchaseError;
+
+            // 2. Decrement Pending Credits
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ creditos_pendentes: 0 } as any)
+              .eq('id', user?.id);
+
+            if (updateError) throw updateError;
+
+            toast.dismiss(loadingToast);
+            toast.success(`${pending} crédito(s) resgatado(s) com sucesso!`);
+
+            // Force refresh
+            window.location.reload();
+          } catch (error) {
+            console.error(error);
+            toast.error('Erro ao resgatar bônus');
+          }
+        }}
+      >
+        <Gift className="h-4 w-4" />
+        Resgatar {((profile as any)?.creditos_pendentes || 0)} Bônus
+      </Button>
+    )}
+  </div>
+              </>
+            )}
+          </Card >
+        </div >
+
+  {/* Action Grid */ }
+  < div className = "grid gap-6 md:grid-cols-2 lg:grid-cols-2" >
+
+    {/* Avaliações Salvas */ }
+    < Card
+className = "p-6 hover:shadow-lg transition-all cursor-pointer group border-border"
+onClick = {() => navigate('/dashboard/avaliacoes')}
+          >
+  <div className="flex items-center gap-4">
+    <div className="p-3 rounded-lg bg-blue-50 group-hover:bg-blue-100 transition-colors">
+      <FileText className="h-8 w-8 text-blue-600" />
+    </div>
+    <div>
+      <h3 className="text-lg font-semibold mb-1">Avaliações Salvas</h3>
+      <p className="text-sm text-muted-foreground">
+        Ver histórico de laudos criados
+      </p>
+    </div>
+  </div>
+          </Card >
+
+  {/* Métricas */ }
+  < Card
+className = "p-6 hover:shadow-lg transition-all cursor-pointer group border-border"
+onClick = {() => navigate('/dashboard/metricas')}
+          >
+  <div className="flex items-center gap-4">
+    <div className="p-3 rounded-lg bg-purple-50 group-hover:bg-purple-100 transition-colors">
+      <TrendingUp className="h-8 w-8 text-purple-600" />
+    </div>
+    <div>
+      <h3 className="text-lg font-semibold mb-1">Métricas</h3>
+      <p className="text-sm text-muted-foreground">
+        Ver estatísticas e desempenho
+      </p>
+    </div>
+  </div>
+          </Card >
+
+  {/* Vídeos Tutoriais */ }
+  < Card
+className = "p-6 hover:shadow-lg transition-all cursor-pointer group border-border"
+onClick = {() => navigate('/dashboard/tutoriais')}
+          >
+  <div className="flex items-center gap-4">
+    <div className="p-3 rounded-lg bg-indigo-50 group-hover:bg-indigo-100 transition-colors">
+      <Video className="h-8 w-8 text-indigo-600" />
+    </div>
+    <div>
+      <h3 className="text-lg font-semibold mb-1">Vídeos Tutoriais</h3>
+      <p className="text-sm text-muted-foreground">
+        Aprenda a usar a plataforma
+      </p>
+    </div>
+  </div>
+          </Card >
+
+  {/* Reportar Erro */ }
+  < Card
+className = "p-6 hover:shadow-lg transition-all cursor-pointer group border-border"
+onClick = {() => navigate('/dashboard/reportar-erro')}
+          >
+  <div className="flex items-center gap-4">
+    <div className="p-3 rounded-lg bg-red-50 group-hover:bg-red-100 transition-colors">
+      <AlertTriangle className="h-8 w-8 text-red-600" />
+    </div>
+    <div>
+      <h3 className="text-lg font-semibold mb-1">Reportar Erro</h3>
+      <p className="text-sm text-muted-foreground">
+        Relatar problemas ou bugs
+      </p>
+    </div>
+  </div>
+          </Card >
+
+  {/* Admin Cards (Only visible to admins) */ }
+{
+  isAdmin && (
+    <>
+      <Card className="p-6 hover:shadow-lg transition-all cursor-pointer group border-primary/20" onClick={() => navigate('/dashboard/admin')}>
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <Shield className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold mb-1">Painel Admin</h3>
+            <p className="text-sm text-muted-foreground">
+              Gerenciar usuários e planos
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-6 hover:shadow-lg transition-all cursor-pointer group border-primary/20" onClick={() => navigate('/dashboard/conteudo')}>
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <Edit className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold mb-1">Gerenciar Conteúdo</h3>
+            <p className="text-sm text-muted-foreground">
+              Editar landing page e vídeos
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-6 hover:shadow-lg transition-all cursor-pointer group border-primary/20" onClick={() => navigate('/dashboard/admin/cms')}>
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <Settings className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold mb-1">CMS Planos</h3>
+            <p className="text-sm text-muted-foreground">
+              Editar planos e preços
+            </p>
+          </div>
+        </div>
+      </Card>
+    </>
+  )
+}
+
+        </div >
+      </div >
+
+  <AddCreditsModal
+    open={showCreditsModal}
+    onOpenChange={setShowCreditsModal}
+  />
+    </div >
   );
 };
 

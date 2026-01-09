@@ -16,9 +16,15 @@ interface ImageUploadProps {
   allowMultiple?: boolean;
 }
 
+<<<<<<< HEAD
 export const ImageUpload = ({
   onImageSelect,
   currentImage,
+=======
+export const ImageUpload = ({ 
+  onImageSelect, 
+  currentImage, 
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
   annotatedImage,
   onAnnotate,
   onRemove,
@@ -29,7 +35,11 @@ export const ImageUpload = ({
   const [isCompressing, setIsCompressing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+<<<<<<< HEAD
   const compressImage = useCallback(async (file: File): Promise<string> => {
+=======
+  const compressImage = async (file: File): Promise<string> => {
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     setIsCompressing(true);
     try {
       const options = {
@@ -40,7 +50,11 @@ export const ImageUpload = ({
       };
 
       const compressedFile = await imageCompression(file, options);
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
       // Convert to base64
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -54,7 +68,11 @@ export const ImageUpload = ({
     } finally {
       setIsCompressing(false);
     }
+<<<<<<< HEAD
   }, [maxSizeMB]);
+=======
+  };
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -98,7 +116,11 @@ export const ImageUpload = ({
     } finally {
       setIsCompressing(false);
     }
+<<<<<<< HEAD
   }, [maxSizeMB, onImageSelect, allowMultiple, compressImage]);
+=======
+  }, [maxSizeMB, onImageSelect, allowMultiple]);
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -115,7 +137,11 @@ export const ImageUpload = ({
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">{label}</label>
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
       {/* Hidden input for "Trocar Imagem" button */}
       <input
         ref={inputRef}
@@ -131,6 +157,7 @@ export const ImageUpload = ({
           }
         }}
       />
+<<<<<<< HEAD
 
       {!displayImage ? (
         <div
@@ -139,6 +166,17 @@ export const ImageUpload = ({
             ? "border-primary bg-primary/5"
             : "border-border hover:border-primary/50"
             }`}
+=======
+      
+      {!displayImage ? (
+        <div
+          {...getRootProps()}
+          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+            isDragActive 
+              ? "border-primary bg-primary/5" 
+              : "border-border hover:border-primary/50"
+          }`}
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
         >
           <input {...getInputProps()} />
           <div className="flex flex-col items-center gap-2">
@@ -169,9 +207,15 @@ export const ImageUpload = ({
       ) : (
         <div className="space-y-2">
           <div className="relative group rounded-lg overflow-hidden border">
+<<<<<<< HEAD
             <img
               src={displayImage}
               alt="Preview"
+=======
+            <img 
+              src={displayImage} 
+              alt="Preview" 
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
               className="w-full h-auto max-h-96 object-contain bg-muted"
             />
             {annotatedImage && (
@@ -180,11 +224,19 @@ export const ImageUpload = ({
               </div>
             )}
           </div>
+<<<<<<< HEAD
 
           <div className="flex gap-2">
             {onAnnotate && (
               <Button
                 variant="outline"
+=======
+          
+          <div className="flex gap-2">
+            {onAnnotate && (
+              <Button 
+                variant="outline" 
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
                 size="sm"
                 onClick={onAnnotate}
               >
@@ -193,8 +245,13 @@ export const ImageUpload = ({
               </Button>
             )}
             {onRemove && (
+<<<<<<< HEAD
               <Button
                 variant="outline"
+=======
+              <Button 
+                variant="outline" 
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
                 size="sm"
                 onClick={onRemove}
               >
@@ -202,8 +259,13 @@ export const ImageUpload = ({
                 Remover
               </Button>
             )}
+<<<<<<< HEAD
             <Button
               variant="outline"
+=======
+            <Button 
+              variant="outline" 
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
               size="sm"
               onClick={() => inputRef.current?.click()}
             >

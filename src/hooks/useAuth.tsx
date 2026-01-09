@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+=======
+import { createContext, useContext, useEffect, useState } from 'react';
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -54,7 +58,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+<<<<<<< HEAD
   const fetchProfile = useCallback(async (userId: string) => {
+=======
+  const fetchProfile = async (userId: string) => {
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -100,7 +108,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error('Exception fetching profile:', error);
     }
+<<<<<<< HEAD
   }, [navigate]);
+=======
+  };
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   const refreshProfile = async () => {
     if (user) {
@@ -139,7 +151,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
+<<<<<<< HEAD
   }, [fetchProfile]);
+=======
+  }, []);
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   const signOut = async () => {
     try {
@@ -161,7 +177,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+<<<<<<< HEAD
 // eslint-disable-next-line react-refresh/only-export-components
+=======
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth must be used within AuthProvider');

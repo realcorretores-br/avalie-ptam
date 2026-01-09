@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { useEffect, useState, useCallback } from "react";
+=======
+import { useEffect, useState } from "react";
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -35,7 +39,10 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+<<<<<<< HEAD
   TabsTrigger as TabsTriggerPrimitive,
+=======
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 } from "@/components/ui/tabs";
 import {
   Select,
@@ -105,6 +112,7 @@ interface AdminLog {
   created_at: string;
 }
 
+<<<<<<< HEAD
 // Helper to generate periods based on range and granularity
 const generatePeriods = (start: Date, end: Date, granularity: 'mensal' | 'semanal' | 'diario') => {
   const periods: { start: Date; end: Date; label: string }[] = [];
@@ -137,6 +145,8 @@ const generatePeriods = (start: Date, end: Date, granularity: 'mensal' | 'semana
   return periods;
 };
 
+=======
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 const Admin = () => {
   const { isAdmin, loading: roleLoading } = useRole();
   const navigate = useNavigate();
@@ -154,7 +164,10 @@ const Admin = () => {
   const [customDateEnd, setCustomDateEnd] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'todos' | 'usuarios' | 'assinaturas' | 'receita'>('todos');
   const [cidadeFilter, setCidadeFilter] = useState('');
+<<<<<<< HEAD
   const [appliedRange, setAppliedRange] = useState<{ start: string; end: string } | null>(null);
+=======
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   const [analyticsData, setAnalyticsData] = useState({
     userGrowth: [] as { period: string; users: number }[],
@@ -195,6 +208,7 @@ const Admin = () => {
 
 
 
+<<<<<<< HEAD
   const calculateAnalytics = useCallback((
     currentUsers: User[] = [],
     currentSubs: Subscription[] = [],
@@ -311,6 +325,13 @@ const Admin = () => {
   }, [revenueFilter, reportFilter]);
 
   const fetchData = useCallback(async () => {
+=======
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     try {
       setLoading(true);
 
@@ -405,7 +426,11 @@ const Admin = () => {
       const { data: reportsData, error: reportsError } = await supabase
         .from('additional_reports_purchases')
         .select('*')
+<<<<<<< HEAD
         .eq('payment_status', 'approved')
+=======
+        .eq('payment_status', 'approved') // Assuming 'approved' is the status for successful payments
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
         .order('created_at', { ascending: false });
 
       if (reportsError) {
@@ -413,17 +438,28 @@ const Admin = () => {
       }
       setReportsPurchases(reportsData || []);
 
+<<<<<<< HEAD
+=======
+      calculateAnalytics(usersWithRoles || [], subsData as any || [], reportsData || []);
+
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     } catch (error: any) {
       console.error('Error fetching admin data:', error);
       toast.error(`Erro ao carregar dados: ${error?.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
+<<<<<<< HEAD
   }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+=======
+  };
+
+  const [appliedRange, setAppliedRange] = useState<{ start: string; end: string } | null>(null);
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   const handleApplyCustomRange = () => {
     if (customDateStart && customDateEnd) {
@@ -431,13 +467,179 @@ const Admin = () => {
     }
   };
 
+<<<<<<< HEAD
+=======
+  // Helper to generate periods based on range and granularity
+  const generatePeriods = (start: Date, end: Date, granularity: 'mensal' | 'semanal' | 'diario') => {
+    const periods: { start: Date; end: Date; label: string }[] = [];
+    const current = new Date(start);
+
+    while (current <= end) {
+      let pStart = new Date(current);
+      let pEnd = new Date(current);
+      let label = '';
+
+      if (granularity === 'mensal') {
+        pStart.setDate(1);
+        pEnd = new Date(pStart.getFullYear(), pStart.getMonth() + 1, 0, 23, 59, 59);
+        label = `${pStart.toLocaleString('pt-BR', { month: 'short' })}/${pStart.getFullYear().toString().slice(2)}`;
+        current.setMonth(current.getMonth() + 1);
+      } else if (granularity === 'semanal') {
+        // Adjust to start of week (Sunday) if needed, or just chunks of 7 days
+        pEnd.setDate(pStart.getDate() + 6);
+        pEnd.setHours(23, 59, 59);
+        label = `${pStart.getDate()}/${pStart.getMonth() + 1}`;
+        current.setDate(current.getDate() + 7);
+      } else { // diario
+        pEnd.setHours(23, 59, 59);
+        label = `${pStart.getDate()}/${pStart.getMonth() + 1}`;
+        current.setDate(current.getDate() + 1);
+      }
+
+      // Cap end date
+      if (pEnd > end) pEnd = new Date(end);
+
+      periods.push({ start: pStart, end: pEnd, label });
+    }
+    return periods;
+  };
+
+  const calculateAnalytics = (
+    currentUsers: User[] = users,
+    currentSubs: Subscription[] = subscriptions,
+    currentReports: any[] = [],
+    customRange: { start: string; end: string } | null = appliedRange
+  ) => {
+    const now = new Date();
+    let startDate = new Date();
+    let endDate = new Date();
+
+    // 1. Determine Time Range (Priority: Custom > Report > Revenue Default)
+    if (customRange) {
+      startDate = new Date(customRange.start);
+      endDate = new Date(customRange.end);
+      endDate.setHours(23, 59, 59);
+    } else {
+      // Report Filter Priority
+      switch (reportFilter) {
+        case 'ano':
+          startDate = new Date(now.getFullYear(), 0, 1); // Jan 1st
+          endDate = now;
+          break;
+        case 'mes_passado':
+          startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+          break;
+        case 'mes_atual':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          endDate = now;
+          break;
+        case '7_dias':
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - 7);
+          endDate = now;
+          break;
+        default:
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          endDate = now;
+      }
+    }
+
+    // 2. Determine Granularity (Revenue Filter)
+    const granularity = revenueFilter;
+
+    // 3. Generate Periods
+    const periods = generatePeriods(startDate, endDate, granularity);
+
+    // 4. Filter Data by Range (for Totals)
+    const filteredUsers = currentUsers.filter(u => {
+      const d = new Date(u.created_at);
+      return d >= startDate && d <= endDate;
+    });
+
+    // Active Subscriptions: Must be active AND created within the period (or active during? User said "Conta apenas assinaturas ativas dentro do período selecionado")
+    // Usually "Active Subscriptions" is a snapshot. But if we filter by period, it implies "New Active Subs" or "Subs active at that time".
+    // Given the conversion rate formula (subs converted in period / users active in period), let's stick to "Created in period and currently active" or just "Created in period".
+    // If we use "Created in period", it matches the sales view.
+    const filteredSubs = currentSubs.filter(s => {
+      const d = new Date(s.created_at);
+      return d >= startDate && d <= endDate;
+    });
+
+    const filteredReports = currentReports.filter(r => {
+      const d = new Date(r.created_at);
+      return d >= startDate && d <= endDate;
+    });
+
+    // 5. Calculate Totals
+    const totalUsers = currentUsers.length; // Show total users in DB, not just in period
+    const activeSubscriptions = currentSubs.length; // Show total active subs
+
+    const revenueFromSubs = filteredSubs.reduce((sum, s) => sum + (s.plans?.preco || 0), 0);
+    const revenueFromReports = filteredReports.reduce((sum, r) => sum + (r.total_price || r.amount || 0), 0);
+    const totalRevenue = revenueFromSubs + revenueFromReports;
+
+    // Conversion Rate: (assinaturas convertidas no período) / (usuários ativos no período)
+    // Assuming "usuários ativos no período" means "users created in the period" (new users) for a conversion funnel.
+    // If it meant "Total Active Users in system", the formula would be different.
+    // Based on "Growth" context, it's usually New Subs / New Users.
+    const conversionRate = filteredUsers.length > 0 ? ((filteredSubs.length / filteredUsers.length) * 100) : 0;
+
+    // 6. Generate Chart Data
+    const userGrowth = periods.map(period => {
+      const count = currentUsers.filter(u => {
+        const date = new Date(u.created_at);
+        return date >= period.start && date <= period.end;
+      }).length;
+      return { period: period.label, users: count };
+    });
+
+    const revenueChart = periods.map(period => {
+      const subsAmount = currentSubs
+        .filter(s => {
+          const date = new Date(s.created_at);
+          return date >= period.start && date <= period.end;
+        })
+        .reduce((sum, s) => sum + (s.plans?.preco || 0), 0);
+
+      const reportsAmount = currentReports
+        .filter(r => {
+          const date = new Date(r.created_at);
+          return date >= period.start && date <= period.end;
+        })
+        .reduce((sum, r) => sum + (r.total_price || r.amount || 0), 0);
+
+      return { period: period.label, revenue: subsAmount + reportsAmount };
+    });
+
+    // 7. Plan Distribution
+    const planCounts: Record<string, number> = {};
+    filteredSubs.forEach(sub => {
+      const name = sub.plans?.nome || 'Desconhecido';
+      planCounts[name] = (planCounts[name] || 0) + 1;
+    });
+    const planDistribution = Object.entries(planCounts).map(([name, value]) => ({ name, value }));
+
+    setAnalyticsData({
+      userGrowth,
+      revenue: revenueChart,
+      planDistribution,
+      metrics: { totalUsers, activeSubscriptions, totalRevenue, conversionRate }
+    });
+  };
+
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
   // Update when filters change
   useEffect(() => {
     // Only recalculate if we have data
     if (users.length > 0 || subscriptions.length > 0) {
       calculateAnalytics(users, subscriptions, reportsPurchases, appliedRange);
     }
+<<<<<<< HEAD
   }, [revenueFilter, reportFilter, appliedRange, users, subscriptions, reportsPurchases, calculateAnalytics]);
+=======
+  }, [revenueFilter, reportFilter, appliedRange, users, subscriptions, reportsPurchases]); // Dependencies
+>>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   const handleExportToExcel = () => {
     exportToExcel(users, subscriptions);
