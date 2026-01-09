@@ -36,7 +36,6 @@ export const CreditDisplay = ({ hideReportsLine = false }: CreditDisplayProps) =
     );
   }
 
-<<<<<<< HEAD
   const isAvulso = subscription.plans?.tipo === 'avulso';
   const hasExpiration = subscription.data_expiracao;
   const isExpired = !isAvulso && hasExpiration && new Date(subscription.data_expiracao) < new Date();
@@ -53,10 +52,6 @@ export const CreditDisplay = ({ hideReportsLine = false }: CreditDisplayProps) =
 
   // Percentage for progress bar (based on plan usage only)
   const percentage = planLimit > 0 ? (planUsed / planLimit) * 100 : 100;
-=======
-  const available = subscription.relatorios_disponiveis - subscription.relatorios_usados;
-  const percentage = (subscription.relatorios_usados / subscription.relatorios_disponiveis) * 100;
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   return (
     <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
@@ -65,7 +60,6 @@ export const CreditDisplay = ({ hideReportsLine = false }: CreditDisplayProps) =
           <FileText className="h-6 w-6 text-primary" />
         </div>
         <div className="flex-1">
-<<<<<<< HEAD
           <p className="text-sm font-medium text-foreground">
             {isExpired ? "Assinatura vencida" : "Relatórios Disponíveis"}
           </p>
@@ -74,20 +68,11 @@ export const CreditDisplay = ({ hideReportsLine = false }: CreditDisplayProps) =
             <span className="text-2xl font-bold text-primary">{totalAvailable}</span>
             <span className="text-sm text-muted-foreground">
               (Plan: {planRemaining} + Extra: {extraRemaining})
-=======
-          <p className="text-sm font-medium text-foreground">Relatórios Disponíveis</p>
-          <div className="flex items-baseline gap-2">
-            <Coins className="h-5 w-5 text-primary" />
-            <span className="text-2xl font-bold text-primary">{available}</span>
-            <span className="text-sm text-muted-foreground">
-              de {subscription.relatorios_disponiveis}
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
             </span>
           </div>
         </div>
       </div>
       {!hideReportsLine && (
-<<<<<<< HEAD
         <div className="mt-3 flex flex-col gap-1 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <CreditCard className="h-4 w-4" />
@@ -95,13 +80,6 @@ export const CreditDisplay = ({ hideReportsLine = false }: CreditDisplayProps) =
               Plano: {isExpired ? "0 (Vencido)" : `${planUsed}/${planLimit}`}
             </span>
           </div>
-=======
-        <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-          <CreditCard className="h-4 w-4" />
-          <span>
-            Relatórios: {subscription.relatorios_usados}/{subscription.relatorios_disponiveis} disponíveis
-          </span>
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
         </div>
       )}
       <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">

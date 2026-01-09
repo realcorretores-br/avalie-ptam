@@ -17,11 +17,7 @@ export const Conclusao = ({ data, updateData }: ConclusaoProps) => {
     if (data.valorMedio && !data.valorFinal) {
       updateData({ valorFinal: data.valorMedio });
     }
-<<<<<<< HEAD
   }, [data.valorMedio, data.valorFinal, updateData]);
-=======
-  }, [data.valorMedio]);
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   const handleConvertToWords = () => {
     if (!data.valorFinal) {
@@ -35,11 +31,7 @@ export const Conclusao = ({ data, updateData }: ConclusaoProps) => {
 
     const extenso = numberToWords(data.valorFinal);
     updateData({ valorFinalExtenso: extenso });
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     toast({
       title: "Convertido!",
       description: "Valor convertido para extenso com sucesso.",
@@ -91,15 +83,9 @@ export const Conclusao = ({ data, updateData }: ConclusaoProps) => {
             <Label htmlFor="valorFinalExtenso">
               Valor por Extenso <span className="text-destructive">*</span>
             </Label>
-<<<<<<< HEAD
             <Button
               type="button"
               variant="outline"
-=======
-            <Button 
-              type="button" 
-              variant="outline" 
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
               size="sm"
               onClick={handleConvertToWords}
             >

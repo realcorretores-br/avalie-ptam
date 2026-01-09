@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import { useState, useEffect, useCallback } from "react";
-=======
-import { useState, useEffect } from "react";
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 import { Bell, Trash2, X, Check } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -27,11 +23,7 @@ export const NotificationsPopover = () => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [open, setOpen] = useState(false);
 
-<<<<<<< HEAD
     const fetchNotifications = useCallback(async () => {
-=======
-    const fetchNotifications = async () => {
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
         if (!user) return;
 
         const { data, error } = await supabase
@@ -47,11 +39,7 @@ export const NotificationsPopover = () => {
 
         setNotifications(data || []);
         setUnreadCount(data?.filter(n => !n.read).length || 0);
-<<<<<<< HEAD
     }, [user]);
-=======
-    };
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
     useEffect(() => {
         fetchNotifications();
@@ -76,11 +64,7 @@ export const NotificationsPopover = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-<<<<<<< HEAD
     }, [user, fetchNotifications]);
-=======
-    }, [user]);
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
     const markAsRead = async (id: string) => {
         const { error } = await supabase

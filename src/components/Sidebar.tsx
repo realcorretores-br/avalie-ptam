@@ -357,6 +357,6 @@ export const Sidebar = ({ className }: SidebarProps) => {
                 open={showCreditsModal}
                 onOpenChange={setShowCreditsModal}
             />
-        </div>
+        </div >
     );
 };

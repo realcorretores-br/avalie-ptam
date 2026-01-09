@@ -16,11 +16,7 @@ export const Finalidade = ({ data, updateData }: FinalidadeProps) => {
     if (data.finalidade && !validOptions.includes(data.finalidade)) {
       updateData({ finalidade: '' });
     }
-<<<<<<< HEAD
   }, [data.finalidade, updateData]);
-=======
-  }, [data.finalidade]);
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
   return (
     <div className="space-y-4">
       <div className="rounded-lg bg-accent/50 p-4">

@@ -16,11 +16,7 @@ export const ConsideracoesFinais = ({ data, updateData }: ConsideracoesFinaisPro
     if (!data.consideracoesFinais) {
       updateData({ consideracoesFinais: defaultText });
     }
-<<<<<<< HEAD
   }, [data.consideracoesFinais, updateData]);
-=======
-  }, []);
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   return (
     <div className="space-y-4">

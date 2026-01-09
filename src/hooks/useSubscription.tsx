@@ -51,7 +51,6 @@ export const useSubscription = () => {
           )
         `)
         .eq('user_id', user.id)
-        .eq('user_id', user.id)
         .maybeSingle();
 
       if (error) throw error;
@@ -69,7 +68,28 @@ export const useSubscription = () => {
       const hasPlanCredits = (data?.relatorios_disponiveis || 0) > 0;
       const hasExtraCredits = (data?.creditos_extra || 0) > 0;
 
-      setHasActiveSubscription(!!data && (hasPlanCredits || hasExtraCredits || isAvulso || !hasExpiration || new Date(data.data_expiracao) > new Date()));
+      // Regra Simplificada e Absoluta de Acesso:
+      // 1. Tem Crédito Avulso? (Nunca expira) -> ATIVO
+      // 2. Tem Plano Ativo E (Crédito Plano > 0)? -> ATIVO
+      // 3. Admin? -> ATIVO (Já tratado acima)
+      // 4. Avulso Plan Type (sem validade)? -> ATIVO (Se tiver crédito, cai na regra 1 na verdade, mas mantemos compatibilidade)
+
+      const hasExtra = (data?.creditos_extra || 0) > 0;
+
+      // Plan Check
+      const isPlanAvulso = (data as any)?.plans?.tipo === 'avulso';
+      const hasPlanTime = isPlanAvulso || (!data.data_expiracao || new Date(data.data_expiracao) > new Date());
+      const hasPlanBalance = ((data?.relatorios_disponiveis || 0) - (data?.relatorios_usados || 0)) > 0;
+
+      const isPlanValid = hasPlanTime && hasPlanBalance;
+
+      // Status do banco ('active') é secundário se tiver crédito avulso,
+      // mas para crédito do plano, assumimos que precisa estar semanticamente válido ou com tempo.
+      // O prompt pede: "Se credit_avulso >= 1 -> liberar... Se plano ativo, liberar quando houver crédito"
+
+      const isActive = !!data && (hasExtra || isPlanValid);
+
+      setHasActiveSubscription(isActive);
     } catch (error) {
       console.error('Error fetching subscription:', error);
       setHasActiveSubscription(false);

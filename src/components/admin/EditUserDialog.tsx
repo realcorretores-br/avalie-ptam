@@ -41,7 +41,6 @@ export const EditUserDialog = ({ open, onOpenChange, userId, onSuccess }: EditUs
   });
 
   useEffect(() => {
-<<<<<<< HEAD
     const fetchUserProfile = async () => {
       try {
         const { data, error } = await supabase
@@ -78,52 +77,11 @@ export const EditUserDialog = ({ open, onOpenChange, userId, onSuccess }: EditUs
       }
     };
 
-=======
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     if (open && userId) {
       fetchUserProfile();
     }
   }, [open, userId]);
 
-<<<<<<< HEAD
-=======
-  const fetchUserProfile = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-
-      setFormData({
-        nome_completo: data.nome_completo || '',
-        email: data.email || '',
-        telefone: data.telefone || '',
-        cpf: data.cpf || '',
-        rg: data.rg || '',
-        endereco: data.endereco || '',
-        numero: data.numero || '',
-        complemento: data.complemento || '',
-        bairro: data.bairro || '',
-        cidade: data.cidade || '',
-        estado: data.estado || '',
-        cep: data.cep || '',
-        tipo_avaliador: data.tipo_avaliador || '',
-        creci: data.creci || '',
-        cau: data.cau || '',
-        crea: data.crea || '',
-        cnae: data.cnae || '',
-        cnpj: data.cnpj || '',
-      });
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      toast.error('Erro ao carregar perfil do usuário');
-    }
-  };
-
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
   const handleSave = async () => {
     setLoading(true);
     try {

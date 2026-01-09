@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import { useEffect, useState, useCallback } from "react";
-=======
-import { useEffect, useState } from "react";
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,19 +26,7 @@ const Metricas = () => {
   });
   const [loading, setLoading] = useState(true);
 
-<<<<<<< HEAD
-
-
   const fetchMetrics = useCallback(async () => {
-=======
-  useEffect(() => {
-    if (user) {
-      fetchMetrics();
-    }
-  }, [user]);
-
-  const fetchMetrics = async () => {
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
     if (!user) return;
 
     try {
@@ -86,33 +70,20 @@ const Metricas = () => {
       const tempoMedioAvaliacao =
         temposAvaliacao.length > 0
           ? Math.round(
-<<<<<<< HEAD
             temposAvaliacao.reduce((a, b) => a + b, 0) / temposAvaliacao.length
           )
-=======
-              temposAvaliacao.reduce((a, b) => a + b, 0) / temposAvaliacao.length
-            )
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
           : 0;
 
       // Avaliações por mês (últimos 6 meses)
       const avaliacoesPorMes: { mes: string; quantidade: number }[] = [];
       const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
       for (let i = 5; i >= 0; i--) {
         const date = new Date();
         date.setMonth(date.getMonth() - i);
         const mesIndex = date.getMonth();
         const ano = date.getFullYear();
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
         const quantidade = avaliacoes.filter((av) => {
           const avDate = new Date(av.created_at!);
           return avDate.getMonth() === mesIndex && avDate.getFullYear() === ano;
@@ -136,7 +107,6 @@ const Metricas = () => {
     } finally {
       setLoading(false);
     }
-<<<<<<< HEAD
   }, [user]);
 
   useEffect(() => {
@@ -144,9 +114,6 @@ const Metricas = () => {
       fetchMetrics();
     }
   }, [user, fetchMetrics]);
-=======
-  };
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
 
   if (loading) {
     return (
@@ -246,18 +213,10 @@ const Metricas = () => {
                     <div
                       className="bg-primary h-full flex items-center justify-end pr-3 transition-all"
                       style={{
-<<<<<<< HEAD
                         width: `${metrics.totalAvaliacoes > 0
                           ? (item.quantidade / metrics.totalAvaliacoes) * 100
                           : 0
                           }%`,
-=======
-                        width: `${
-                          metrics.totalAvaliacoes > 0
-                            ? (item.quantidade / metrics.totalAvaliacoes) * 100
-                            : 0
-                        }%`,
->>>>>>> bfb7ae9ccedca645f984a09ceb934d0fef71822c
                         minWidth: item.quantidade > 0 ? '40px' : '0',
                       }}
                     >
