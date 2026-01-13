@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { FileText, CreditCard, Coins } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 interface CreditDisplayProps {
   hideReportsLine?: boolean;
@@ -18,75 +19,46 @@ export const CreditDisplay = ({ hideReportsLine = false }: CreditDisplayProps) =
     );
   }
 
-  if (!subscription) {
-    return (
-      <Card className="p-4 bg-gradient-to-br from-destructive/10 to-destructive/5 border-destructive/20">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/10">
-            <FileText className="h-6 w-6 text-destructive" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">Sem Plano Ativo</p>
-            <p className="text-xs text-muted-foreground">
-              Assine um plano para criar relatórios
-            </p>
-          </div>
-        </div>
-      </Card>
-    );
-  }
+  // Calculate generic total logic
+  const planCredits = subscription ? (subscription.relatorios_disponiveis || 0) - (subscription.relatorios_usados || 0) : 0;
+  const extraCredits = subscription?.creditos_extra || 0;
+  const totalAvailable = Math.max(0, planCredits) + Math.max(0, extraCredits);
 
-  const isAvulso = subscription.plans?.tipo === 'avulso';
-  const hasExpiration = subscription.data_expiracao;
-  const isExpired = !isAvulso && hasExpiration && new Date(subscription.data_expiracao) < new Date();
+  const hasExpiration = subscription?.data_expiracao;
+  const isExpired = hasExpiration && new Date(subscription.data_expiracao) < new Date();
 
-  // Plan credits logic
-  const planLimit = subscription.relatorios_disponiveis;
-  const planUsed = subscription.relatorios_usados;
-  const planRemaining = isExpired ? 0 : Math.max(0, planLimit - planUsed);
-
-  // Extra credits logic (lifetime)
-  const extraRemaining = subscription.creditos_extra || 0;
-
-  const totalAvailable = planRemaining + extraRemaining;
-
-  // Percentage for progress bar (based on plan usage only)
-  const percentage = planLimit > 0 ? (planUsed / planLimit) * 100 : 100;
+  // Show red if 0 or expired
+  const isCritical = totalAvailable === 0 || isExpired;
 
   return (
-    <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+    <Card className={`p-4 ${isCritical ? 'bg-destructive/5 border-destructive/20' : 'bg-primary/5 border-primary/20'}`}>
       <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-          <FileText className="h-6 w-6 text-primary" />
+        <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${isCritical ? 'bg-destructive/10' : 'bg-primary/10'}`}>
+          <Coins className={`h-6 w-6 ${isCritical ? 'text-destructive' : 'text-primary'}`} />
         </div>
         <div className="flex-1">
           <p className="text-sm font-medium text-foreground">
-            {isExpired ? "Assinatura vencida" : "Relatórios Disponíveis"}
+            {isExpired ? "Créditos Expirados" : "Créditos Disponíveis"}
           </p>
           <div className="flex items-baseline gap-2">
-            <Coins className="h-5 w-5 text-primary" />
-            <span className="text-2xl font-bold text-primary">{totalAvailable}</span>
-            <span className="text-sm text-muted-foreground">
-              (Plan: {planRemaining} + Extra: {extraRemaining})
+            <span className={`text-2xl font-bold ${isCritical ? 'text-destructive' : 'text-primary'}`}>
+              {totalAvailable}
             </span>
+            {hasExpiration && !isExpired && (
+              <span className="text-xs text-muted-foreground">
+                Válido até {new Date(subscription.data_expiracao).toLocaleDateString()}
+              </span>
+            )}
           </div>
         </div>
-      </div>
-      {!hideReportsLine && (
-        <div className="mt-3 flex flex-col gap-1 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />
-            <span>
-              Plano: {isExpired ? "0 (Vencido)" : `${planUsed}/${planLimit}`}
-            </span>
-          </div>
-        </div>
-      )}
-      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full bg-primary transition-all duration-300"
-          style={{ width: `${Math.min(percentage, 100)}%` }}
-        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.location.href = '/dashboard/planos'}
+          className="ml-auto"
+        >
+          Comprar
+        </Button>
       </div>
     </Card>
   );

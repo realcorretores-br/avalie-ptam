@@ -45,10 +45,7 @@ const AvaliacoesSalvas = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [avaliacaoToDelete, setAvaliacaoToDelete] = useState<string | null>(null);
 
-  // Check if user effectively has a recurring plan (Avulso doesn't count as "Active Plan" for UX messages)
-  const hasRecurringPlan = subscription &&
-    (subscription.status === 'active' || subscription.status === 'trialing') &&
-    (subscription.plans as any)?.tipo !== 'avulso';
+
 
   // Determinar limite de visualizações baseado no plano
   const getVisualizationLimit = () => {
@@ -193,10 +190,10 @@ const AvaliacoesSalvas = () => {
   // Filter and Sort
   let filteredAvaliacoes = avaliacoes;
 
-  // Restriction: Users without a recurring plan cannot see Drafts
-  if (!isAdmin && !hasRecurringPlan) {
-    filteredAvaliacoes = filteredAvaliacoes.filter(a => a.status !== 'rascunho');
-  }
+  // Restriction: Users without a recurring plan cannot see Drafts - REMOVED for Package logic
+  // if (!isAdmin && !hasRecurringPlan) {
+  //   filteredAvaliacoes = filteredAvaliacoes.filter(a => a.status !== 'rascunho');
+  // }
 
   const visibleAvaliacoes = isAdmin ? filteredAvaliacoes : filteredAvaliacoes.slice(0, visualizationLimit);
   const hasMore = !isAdmin && filteredAvaliacoes.length > visualizationLimit;
@@ -213,19 +210,12 @@ const AvaliacoesSalvas = () => {
 
           {!isAdmin && !subscriptionLoading && (
             <div className="mb-8">
-              {!hasRecurringPlan ? (
-                <Alert variant="destructive" className="bg-destructive/10 border-destructive/50 text-destructive dark:text-red-400">
-                  <AlertCircle className="h-5 w-5" />
-                  <AlertDescription className="ml-2 font-medium">
-                    Você não possui um plano ativo.
-                    <Link to="/dashboard/planos" className="underline ml-1">Assine um plano</Link>
-                    para salvar rascunhos e visualizar mais relatórios.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <p className="text-muted-foreground">
-                  Seu plano ({subscription?.plans?.nome || 'Ativo'}) permite visualizar até <strong>{visualizationLimit}</strong> relatórios
-                </p>
+              {!isAdmin && !subscriptionLoading && (
+                <div className="mb-8">
+                  <p className="text-muted-foreground">
+                    Seu pacote atual ({subscription?.plans?.nome || 'Básico'}) permite visualizar até <strong>{visualizationLimit === Infinity ? 'Todas' : visualizationLimit}</strong> avaliações.
+                  </p>
+                </div>
               )}
             </div>
           )}

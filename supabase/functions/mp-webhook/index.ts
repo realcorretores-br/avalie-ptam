@@ -75,35 +75,36 @@ serve(async (req) => {
                     throw purchaseError;
                 }
 
-                // 4. Update Subscription/Credits
+                // 4. Update Subscription/Credits with STRICT EXPIRATION logic
                 // First check if user has an active subscription row
                 const { data: subscription } = await supabase
                     .from('subscriptions')
-                    .select('id, relatorios_disponiveis, creditos_extra')
+                    .select('id, relatorios_disponiveis')
                     .eq('user_id', user_id)
                     .single();
 
-                const isCreditPurchase = metadata.type === 'credits';
-
                 if (subscription) {
-                    let updateData = {};
-                    let newBalance = 0;
+                    // Logic:
+                    // 1. ADD exact quantity to current balance (No multiplication)
+                    // 2. RESET expiration to 30 days from NOW (Last purchase)
 
-                    if (isCreditPurchase) {
-                        // Update EXTRA CREDITS (Avulso)
-                        newBalance = (subscription.creditos_extra || 0) + Number(quantity);
-                        updateData = { creditos_extra: newBalance };
-                        console.log("Updating Extra Credits (Avulso). New Balance:", newBalance);
-                    } else {
-                        // Update PLAN CREDITS
-                        newBalance = (subscription.relatorios_disponiveis || 0) + Number(quantity);
-                        updateData = { relatorios_disponiveis: newBalance };
-                        console.log("Updating Plan Credits. New Balance:", newBalance);
-                    }
+                    const currentBalance = subscription.relatorios_disponiveis || 0;
+                    const creditosParaAdicionar = Number(quantity);
+                    const newBalance = currentBalance + creditosParaAdicionar;
+
+                    const newExpirationDate = new Date();
+                    newExpirationDate.setDate(newExpirationDate.getDate() + 30); // NOW + 30 days
+
+                    console.log(`Updating Credits. Old: ${currentBalance}, Adding: ${creditosParaAdicionar}, New: ${newBalance}`);
+                    console.log(`New Expiration Date: ${newExpirationDate.toISOString()}`);
 
                     const { error: updateError } = await supabase
                         .from('subscriptions')
-                        .update(updateData)
+                        .update({
+                            relatorios_disponiveis: newBalance,
+                            data_expiracao: newExpirationDate.toISOString(),
+                            updated_at: new Date().toISOString()
+                        })
                         .eq('id', subscription.id);
 
                     if (updateError) {
@@ -112,7 +113,8 @@ serve(async (req) => {
                     }
                 } else {
                     console.warn("No subscription found for user:", user_id);
-                    // Handle edge case if needed
+                    // Optionally create a subscription row if missing? 
+                    // For now, assuming user must have a row (created on signup).
                 }
             }
         }

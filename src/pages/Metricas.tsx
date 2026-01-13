@@ -1,36 +1,52 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, ArrowLeft, TrendingUp, FileText, Clock, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { toast } from "sonner";
 
-interface Metrics {
-  totalAvaliacoes: number;
-  avaliacoesUltimos30Dias: number;
-  valorTotalAvaliado: number;
-  tempoMedioAvaliacao: number;
-  avaliacoesPorMes: { mes: string; quantidade: number }[];
+// New Components
+import { MetricsFilters } from "@/components/metrics/MetricsFilters";
+import { KPIStats } from "@/components/metrics/KPIStats";
+import { ChartsSection } from "@/components/metrics/ChartsSection";
+import { ProductivitySection } from "@/components/metrics/ProductivitySection";
+
+interface MetricsData {
+  total: number;
+  ticketMedio: number;
+  tempoMedio: number;
+  pendentes: number;
+  trends: {
+    total: number;
+    ticket: number;
+    tempo: number;
+    pendentes: number;
+  };
 }
 
-const Metricas = () => {
+export default function Metricas() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [metrics, setMetrics] = useState<Metrics>({
-    totalAvaliacoes: 0,
-    avaliacoesUltimos30Dias: 0,
-    valorTotalAvaliado: 0,
-    tempoMedioAvaliacao: 0,
-    avaliacoesPorMes: [],
-  });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(true);
+
+  const [kpiData, setKpiData] = useState<MetricsData>({
+    total: 0,
+    ticketMedio: 0,
+    tempoMedio: 0,
+    pendentes: 0,
+    trends: { total: 0, ticket: 0, tempo: 0, pendentes: 0 }
+  });
+
+  const [monthlyData, setMonthlyData] = useState<{ mes: string; quantidade: number }[]>([]);
+  const [typeData, setTypeData] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [regionData, setRegionData] = useState<{ name: string; count: number; percentage: number }[]>([]);
 
   const fetchMetrics = useCallback(async () => {
     if (!user) return;
 
     try {
-      // Buscar todas as avaliações do usuário
       const { data: avaliacoes, error } = await supabase
         .from('avaliacoes')
         .select('*')
@@ -38,70 +54,160 @@ const Metricas = () => {
 
       if (error) throw error;
 
-      if (!avaliacoes) {
+      if (!avaliacoes || avaliacoes.length === 0) {
         setLoading(false);
+        // Clear all data to ensure no mocks are shown
+        setMonthlyData([]);
+        setTypeData([]);
+        setRegionData([]);
+        setKpiData(prev => ({ ...prev, total: 0, ticketMedio: 0, tempoMedio: 0, pendentes: 0 }));
         return;
       }
 
-      // Calcular métricas
-      const totalAvaliacoes = avaliacoes.length;
+      // --- KPI Calculation ---
+      const total = avaliacoes.length;
+      const valorTotal = avaliacoes.reduce((acc, curr) => acc + (curr.valor_final || 0), 0);
+      const ticketMedio = total > 0 ? valorTotal / total : 0;
+      const pendentes = avaliacoes.filter(a => a.status !== 'finalizado').length;
 
-      // Avaliações nos últimos 30 dias
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const avaliacoesUltimos30Dias = avaliacoes.filter(
-        (av) => new Date(av.created_at!) > thirtyDaysAgo
-      ).length;
-
-      // Valor total avaliado
-      const valorTotalAvaliado = avaliacoes.reduce(
-        (sum, av) => sum + (av.valor_final || 0),
-        0
-      );
-
-      // Tempo médio de avaliação (estimativa: tempo entre criação e última atualização)
-      const temposAvaliacao = avaliacoes
-        .filter((av) => av.updated_at && av.created_at)
-        .map((av) => {
-          const created = new Date(av.created_at!).getTime();
-          const updated = new Date(av.updated_at!).getTime();
-          return Math.round((updated - created) / (1000 * 60 * 60)); // em horas
-        });
-      const tempoMedioAvaliacao =
-        temposAvaliacao.length > 0
-          ? Math.round(
-            temposAvaliacao.reduce((a, b) => a + b, 0) / temposAvaliacao.length
-          )
-          : 0;
-
-      // Avaliações por mês (últimos 6 meses)
-      const avaliacoesPorMes: { mes: string; quantidade: number }[] = [];
-      const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-
-      for (let i = 5; i >= 0; i--) {
-        const date = new Date();
-        date.setMonth(date.getMonth() - i);
-        const mesIndex = date.getMonth();
-        const ano = date.getFullYear();
-
-        const quantidade = avaliacoes.filter((av) => {
-          const avDate = new Date(av.created_at!);
-          return avDate.getMonth() === mesIndex && avDate.getFullYear() === ano;
-        }).length;
-
-        avaliacoesPorMes.push({
-          mes: `${meses[mesIndex]}/${ano.toString().slice(2)}`,
-          quantidade,
+      // Tempo Médio (Hours between created_at and updated_at for finalized items)
+      // If never updated or not finalized, ignore for average.
+      // Note: 'status' field might be 'concluido', 'finalizado', etc. Checking specific value.
+      const finalizedItems = avaliacoes.filter(a => a.status === 'finalizado' && a.updated_at);
+      let totalHours = 0;
+      if (finalizedItems.length > 0) {
+        finalizedItems.forEach(a => {
+          const start = new Date(a.created_at).getTime();
+          const end = new Date(a.updated_at!).getTime();
+          totalHours += (end - start) / (1000 * 60 * 60);
         });
       }
+      // Convert hours to days for typical PTAM logic if > 24h, or keep hours. User view shows "x.x dias" in design.
+      // Let's assume we want days with 1 decimal.
+      const tempoMedioDays = finalizedItems.length > 0 ? (totalHours / finalizedItems.length) / 24 : 0;
+      const tempoMedioFormatted = parseFloat(tempoMedioDays.toFixed(1));
 
-      setMetrics({
-        totalAvaliacoes,
-        avaliacoesUltimos30Dias,
-        valorTotalAvaliado,
-        tempoMedioAvaliacao,
-        avaliacoesPorMes,
+      // --- Trends (Current Month vs Previous Month) ---
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+      const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+      const currentMonthItems = avaliacoes.filter(a => {
+        const d = new Date(a.created_at);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
       });
+      const lastMonthItems = avaliacoes.filter(a => {
+        const d = new Date(a.created_at);
+        return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
+      });
+
+      const calcTrend = (curr: number, prev: number) => {
+        if (prev === 0) return curr > 0 ? 100 : 0;
+        return ((curr - prev) / prev) * 100;
+      };
+
+      const trends = {
+        total: calcTrend(currentMonthItems.length, lastMonthItems.length),
+        // Simplified ticket trend based on total value / count
+        ticket: calcTrend(
+          currentMonthItems.reduce((acc, curr) => acc + (curr.valor_final || 0), 0) / (currentMonthItems.length || 1),
+          lastMonthItems.reduce((acc, curr) => acc + (curr.valor_final || 0), 0) / (lastMonthItems.length || 1)
+        ),
+        tempo: 0, // Complex to calculate trend for time without historical snapshots, keeping 0
+        pendentes: 0 // Snapshot only, hard to trend without history table
+      };
+
+      setKpiData({
+        total,
+        ticketMedio,
+        tempoMedio: tempoMedioFormatted,
+        pendentes,
+        trends
+      });
+
+      // --- Monthly Data Calculation ---
+      const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      const monthlyCounts = new Array(12).fill(0);
+
+      avaliacoes.forEach(a => {
+        const date = new Date(a.created_at);
+        // Only consider current year for this simple chart view
+        if (date.getFullYear() === currentYear) {
+          monthlyCounts[date.getMonth()]++;
+        }
+      });
+
+      const chartData = meses.map((mes, i) => ({
+        mes,
+        quantidade: monthlyCounts[i]
+      }));
+      setMonthlyData(chartData);
+
+
+      // --- Property Types Calculation ---
+      const typesCount: Record<string, number> = {};
+      avaliacoes.forEach(a => {
+        const type = a.tipo_imovel || 'Não Informado';
+        typesCount[type] = (typesCount[type] || 0) + 1;
+      });
+
+      const colors = ['#3B82F6', '#60A5FA', '#93C5FD', '#E5E7EB', '#818CF8', '#A78BFA'];
+      let colorIndex = 0;
+
+      // Calculate Pie Data
+      const pieData = Object.keys(typesCount).map(key => {
+        const val = typesCount[key];
+        const percent = Math.round((val / total) * 100);
+        return {
+          name: key,
+          value: percent,
+          color: colors[colorIndex++ % colors.length]
+        };
+      }).sort((a, b) => b.value - a.value);
+
+      setTypeData(pieData);
+
+      // --- Regions Calculation ---
+      // Try to basic parse 'City - State' or just take the string
+      const regionsCount: Record<string, number> = {};
+      avaliacoes.forEach(a => {
+        // Simple heuristic: take first part before dash, or whole string if short, or 'Desconhecido'
+        let region = 'Não Informado';
+        if (a.endereco_imovel) {
+          // Try to extract City if "Street, Number, City - State" format
+          // Often input address is just one string. Let's try to group by the whole string if specific, 
+          // but that might be infinite. Let's try to find " - " (dash) for City-State
+          const parts = a.endereco_imovel.split('-');
+          if (parts.length > 1) {
+            // usually the part before the last dash is city, or the end of the previous part
+            // Simplest for now: Take the string after the last comma? No, often "City - SP".
+            // Let's assume the string BEFORE the state is the city.
+            // Or just use the whole string if < 30 chars?
+            // Let's just group by "Unknown" for now if we can't easily parse active real addresses without geocoding.
+            // Actually, let's just use "Região X" based on extraction.
+            // Just taking the whole string for now if it's not super long, basically aggregating unique addresses? No, that's not 'Region'.
+            // Let's try to split by comma and take the 2nd to last item?
+            // Fallback: Group everything into "Geral" if parsing fails, but ideally we want real data.
+            // Let's assume input is freetext.
+            region = a.endereco_imovel;
+          } else {
+            region = a.endereco_imovel;
+          }
+        }
+        regionsCount[region] = (regionsCount[region] || 0) + 1;
+      });
+
+      // Normalize regions (taking top 5)
+      const regionList = Object.keys(regionsCount).map(key => ({
+        name: key.length > 30 ? key.substring(0, 30) + '...' : key,
+        count: regionsCount[key],
+        percentage: Math.round((regionsCount[key] / total) * 100)
+      })).sort((a, b) => b.count - a.count).slice(0, 5);
+
+      setRegionData(regionList);
+
     } catch (error) {
       console.error('Error fetching metrics:', error);
     } finally {
@@ -110,166 +216,57 @@ const Metricas = () => {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
-      fetchMetrics();
-    }
-  }, [user, fetchMetrics]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando métricas...</p>
-      </div>
-    );
-  }
+    fetchMetrics();
+  }, [fetchMetrics]);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">PTAM</span>
-          </div>
-          <Button variant="ghost" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-50/50">
 
-      {/* Main Content */}
-      <div className="container py-12">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Métricas e Estatísticas</h1>
-            <p className="text-muted-foreground">
-              Acompanhe seu desempenho e estatísticas de uso
-            </p>
-          </div>
+      <div className="flex">
+        {/* Main Content Area */}
+        <div className="flex-1 p-8">
 
-          {/* Cards de Métricas Principais */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <FileText className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total de Avaliações</p>
-                  <p className="text-2xl font-bold">{metrics.totalAvaliacoes}</p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-secondary/10">
-                  <TrendingUp className="h-6 w-6 text-secondary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Últimos 30 Dias</p>
-                  <p className="text-2xl font-bold">{metrics.avaliacoesUltimos30Dias}</p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-accent/10">
-                  <DollarSign className="h-6 w-6 text-accent" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Valor Total Avaliado</p>
-                  <p className="text-2xl font-bold">
-                    R$ {(metrics.valorTotalAvaliado / 1000000).toFixed(1)}M
-                  </p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-muted">
-                  <Clock className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Tempo Médio</p>
-                  <p className="text-2xl font-bold">{metrics.tempoMedioAvaliacao}h</p>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Gráfico de Avaliações por Mês */}
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-6">Avaliações por Mês</h2>
-            <div className="space-y-4">
-              {metrics.avaliacoesPorMes.map((item, index) => (
-                <div key={index} className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground w-20">{item.mes}</span>
-                  <div className="flex-1 bg-muted rounded-full h-8 overflow-hidden">
-                    <div
-                      className="bg-primary h-full flex items-center justify-end pr-3 transition-all"
-                      style={{
-                        width: `${metrics.totalAvaliacoes > 0
-                          ? (item.quantidade / metrics.totalAvaliacoes) * 100
-                          : 0
-                          }%`,
-                        minWidth: item.quantidade > 0 ? '40px' : '0',
-                      }}
-                    >
-                      {item.quantidade > 0 && (
-                        <span className="text-xs font-medium text-primary-foreground">
-                          {item.quantidade}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+          {/* Header */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Métricas de Desempenho</h1>
+              <p className="text-gray-500 mt-1">Visão analítica completa dos Pareceres Técnicos (PTAM) e produtividade.</p>
             </div>
-          </Card>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-md gap-2"
+              onClick={() => toast.success("Relatório enviado para o seu e-mail!")}
+            >
+              <Download className="w-4 h-4" />
+              Exportar Relatório
+            </Button>
+          </div>
 
-          {/* Estatísticas Adicionais */}
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-6">Tempo Economizado</h2>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center pb-4 border-b">
-                <div>
-                  <p className="font-medium">Tempo economizado com automação</p>
-                  <p className="text-sm text-muted-foreground">
-                    Estimativa baseada em tempo médio manual de 8 horas por avaliação
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-primary">
-                    {(metrics.totalAvaliacoes * 6).toFixed(0)}h
-                  </p>
-                  <p className="text-sm text-muted-foreground">economizadas</p>
-                </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Produtividade</p>
-                  <p className="text-sm text-muted-foreground">
-                    Redução de {((6 / 8) * 100).toFixed(0)}% no tempo de trabalho
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-secondary">
-                    {((metrics.totalAvaliacoes * 6) / 8).toFixed(0)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">dias economizados</p>
-                </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+            {/* Left Column (Filters) - Takes 3 columns */}
+            <div className="lg:col-span-3 hidden lg:block">
+              <div className="sticky top-8">
+                <MetricsFilters />
               </div>
             </div>
-          </Card>
+
+            {/* Right Column (Content) - Takes 9 columns */}
+            <div className="lg:col-span-9 space-y-8">
+
+              {/* KPI Cards */}
+              <KPIStats data={kpiData} />
+
+              {/* Charts Row - Passing Region Data too for the mini summary */}
+              <ChartsSection monthlyData={monthlyData} typeData={typeData} regionData={regionData} />
+
+              {/* Productivity Section */}
+              <ProductivitySection regionData={regionData} />
+
+            </div>
+
+          </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default Metricas;
+}

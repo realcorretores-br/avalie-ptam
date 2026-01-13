@@ -55,39 +55,32 @@ export const useSubscription = () => {
 
       if (error) throw error;
 
-      // For avulso plans with no expiration date, always consider active
-      const isAvulso = (data as unknown as Subscription)?.plans?.tipo === 'avulso';
-      const hasExpiration = data?.data_expiracao;
+      setSubscription(data as unknown as Subscription);
 
       setSubscription(data as unknown as Subscription);
 
-      // Allow access if:
-      // 1. Is Avulso plan (no expiry)
-      // 2. Has valid expiration date (future)
-      // 3. OR Has available credits (relatorios_disponiveis OR creditos_extra)
-      const hasPlanCredits = (data?.relatorios_disponiveis || 0) > 0;
-      const hasExtraCredits = (data?.creditos_extra || 0) > 0;
+      // Nova Lógica de Pacotes e Expiração (Jan 2026 - Atualizada)
+      // 1. O saldo é a soma de relatorios_disponiveis + creditos_extra.
+      // 2. A expiração congela TUDO.
 
-      // Regra Simplificada e Absoluta de Acesso:
-      // 1. Tem Crédito Avulso? (Nunca expira) -> ATIVO
-      // 2. Tem Plano Ativo E (Crédito Plano > 0)? -> ATIVO
-      // 3. Admin? -> ATIVO (Já tratado acima)
-      // 4. Avulso Plan Type (sem validade)? -> ATIVO (Se tiver crédito, cai na regra 1 na verdade, mas mantemos compatibilidade)
+      const planCredits = (data as any)?.relatorios_disponiveis || 0;
+      const extraCredits = (data as any)?.creditos_extra || 0;
+      const creditsUsed = (data as any)?.relatorios_usados || 0;
 
-      const hasExtra = (data?.creditos_extra || 0) > 0;
+      // Nota: No novo modelo, 'relatorios_disponiveis' já é o saldo líquido acrescido.
+      // Mas por segurança, e suporte a legado, somamos tudo e subtraímos usados se a lógica de decremento usar 'usados'.
+      // Update: mp-webhook incrementa 'relatorios_disponiveis'. PTAMForm incrementa 'relatorios_usados'.
+      // Logo: Saldo = (relatorios_disponiveis + creditos_extra) - relatorios_usados.
 
-      // Plan Check
-      const isPlanAvulso = (data as any)?.plans?.tipo === 'avulso';
-      const hasPlanTime = isPlanAvulso || (!data.data_expiracao || new Date(data.data_expiracao) > new Date());
-      const hasPlanBalance = ((data?.relatorios_disponiveis || 0) - (data?.relatorios_usados || 0)) > 0;
+      const totalCredits = Math.max(0, (planCredits + extraCredits) - creditsUsed);
 
-      const isPlanValid = hasPlanTime && hasPlanBalance;
+      // Verificação Rigorosa de Validade
+      const expirationDate = data?.data_expiracao ? new Date(data.data_expiracao) : null;
+      const isExpired = expirationDate ? expirationDate < new Date() : false;
 
-      // Status do banco ('active') é secundário se tiver crédito avulso,
-      // mas para crédito do plano, assumimos que precisa estar semanticamente válido ou com tempo.
-      // O prompt pede: "Se credit_avulso >= 1 -> liberar... Se plano ativo, liberar quando houver crédito"
-
-      const isActive = !!data && (hasExtra || isPlanValid);
+      // Regra: Tem crédito E não expirou.
+      const hasCredits = totalCredits > 0;
+      const isActive = hasCredits && !isExpired;
 
       setHasActiveSubscription(isActive);
     } catch (error) {

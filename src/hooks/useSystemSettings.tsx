@@ -7,6 +7,7 @@ export interface SystemSettings {
     enable_subscription: boolean;
     enable_payment_history: boolean;
     enable_notes: boolean;
+    enable_metrics: boolean;
     site_logo?: string;
     site_favicon?: string;
 }
@@ -17,6 +18,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
     enable_subscription: true,
     enable_payment_history: true,
     enable_notes: true,
+    enable_metrics: true,
     site_logo: undefined,
     site_favicon: undefined
 };

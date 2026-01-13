@@ -15,7 +15,8 @@ import {
     History,
     Settings,
     Coins,
-    Wallet
+    Wallet,
+    TrendingUp
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -94,7 +95,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
     // Map content of profile items to settings keys
     const profileItemVisibility = {
         "Perfil": settings.enable_profile,
-        "Assinatura": settings.enable_subscription,
+        "Meus Créditos": settings.enable_subscription,
         "Histórico de Pagamento": settings.enable_payment_history,
         "Anotações": settings.enable_notes
     };
@@ -107,8 +108,8 @@ export const Sidebar = ({ className }: SidebarProps) => {
             tab: "perfil"
         },
         {
-            label: "Assinatura",
-            icon: CreditCard,
+            label: "Meus Créditos",
+            icon: Coins,
             path: "/dashboard/perfil",
             tab: "assinatura"
         },
@@ -335,11 +336,11 @@ export const Sidebar = ({ className }: SidebarProps) => {
 
                 {!isAdmin && (
                     <Button
-                        className="w-full justify-start gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                        onClick={() => setShowCreditsModal(true)}
+                        className="w-full justify-start gap-2 bg-primary hover:bg-primary/90 text-white"
+                        onClick={() => navigate('/dashboard/planos')}
                     >
-                        <Coins className="h-4 w-4" />
-                        Comprar crédito avulso
+                        <CreditCard className="h-4 w-4" />
+                        Comprar Pacote
                     </Button>
                 )}
 

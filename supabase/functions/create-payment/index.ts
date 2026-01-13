@@ -81,8 +81,8 @@ serve(async (req) => {
             items: [
                 {
                     id: planId || 'avulso',
-                    title: `${planName} (x${quantity})`,
-                    quantity: Number(quantity),
+                    title: `${planName} (${quantity} Créditos)`,
+                    quantity: 1, // FIX: Always 1 package, Price is already the package price.
                     currency_id: 'BRL',
                     unit_price: Number(unitPrice)
                 }
@@ -94,9 +94,9 @@ serve(async (req) => {
             }),
             auto_return: 'approved',
             back_urls: {
-                success: `${req.headers.get('origin')}/payment-success-popup`,
-                failure: `${req.headers.get('origin')}/payment-success-popup?status=failure`,
-                pending: `${req.headers.get('origin')}/payment-success-popup?status=pending`
+                success: `${(req.headers.get('origin') && !req.headers.get('origin')?.includes('localhost') && !req.headers.get('origin')?.includes('127.0.0.1')) ? req.headers.get('origin') : 'https://realcorretores.com.br'}/payment-success-popup`,
+                failure: `${(req.headers.get('origin') && !req.headers.get('origin')?.includes('localhost') && !req.headers.get('origin')?.includes('127.0.0.1')) ? req.headers.get('origin') : 'https://realcorretores.com.br'}/payment-success-popup?status=failure`,
+                pending: `${(req.headers.get('origin') && !req.headers.get('origin')?.includes('localhost') && !req.headers.get('origin')?.includes('127.0.0.1')) ? req.headers.get('origin') : 'https://realcorretores.com.br'}/payment-success-popup?status=pending`
             },
             notification_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/mp-webhook`
         };

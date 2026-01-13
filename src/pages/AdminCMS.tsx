@@ -7,27 +7,31 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRole } from "@/hooks/useRole";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Plus, Trash2 } from "lucide-react";
+import { Save, Plus, Trash2, GripVertical, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAdminLog } from "@/hooks/useAdminLog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { CreatePlanDialog } from "@/components/admin/CreatePlanDialog";
 import { EditBenefitsDialog } from "@/components/admin/EditBenefitsDialog";
 import { z } from "zod";
 import AdminLayout from "@/components/AdminLayout";
-import { Edit } from "lucide-react";
-
-const PlanUpdateSchema = z.object({
-  nome: z.string().trim().min(1, "Nome é obrigatório").max(100, "Nome deve ter no máximo 100 caracteres"),
-  preco: z.number().positive("Preço deve ser maior que zero").max(999999, "Preço deve ser menor que 1.000.000"),
-  relatorios_incluidos: z.number().int("Relatórios deve ser um número inteiro").positive("Relatórios deve ser maior que zero").max(10000, "Relatórios deve ser menor que 10.000"),
-  descricao: z.string().trim().max(500, "Descrição deve ter no máximo 500 caracteres").optional(),
-});
-
-const ContentUpdateSchema = z.object({
-  value: z.string().trim().max(2000, "Conteúdo deve ter no máximo 2000 caracteres"),
-});
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +42,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Plan {
   id: string;
@@ -48,7 +53,242 @@ interface Plan {
   descricao: string;
   ativo: boolean;
   beneficios?: string[];
+  position?: number;
 }
+
+const PlanUpdateSchema = z.object({
+  nome: z.string().trim().min(1, "Nome é obrigatório").max(100, "Nome deve ter no máximo 100 caracteres"),
+  preco: z.number().positive("Preço deve ser maior que zero").max(999999, "Preço deve ser menor que 1.000.000"),
+  relatorios_incluidos: z.number().int("Relatórios deve ser um número inteiro").positive("Relatórios deve ser maior que zero").max(10000, "Relatórios deve ser menor que 10.000"),
+  descricao: z.string().trim().max(500, "Descrição deve ter no máximo 500 caracteres").optional(),
+  beneficios: z.array(z.string()).optional(),
+});
+
+const ContentUpdateSchema = z.object({
+  value: z.string().trim().max(2000, "Conteúdo deve ter no máximo 2000 caracteres"),
+});
+
+// Sortable Card Component
+const SortablePlanCard = ({
+  plan,
+  plans,
+  setPlans,
+  handleUpdatePlan,
+  setDeletingPlan,
+  loading
+}: {
+  plan: Plan;
+  plans: Plan[];
+  setPlans: (plans: Plan[]) => void;
+  handleUpdatePlan: (id: string, updates: Partial<Plan>) => Promise<void>;
+  setDeletingPlan: (id: string) => void;
+  loading: boolean;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: plan.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 'auto',
+  };
+
+  const handleBenefitChange = (index: number, value: string) => {
+    const updatedBeneficios = [...(plan.beneficios || [])];
+    updatedBeneficios[index] = value;
+    setPlans(plans.map(p => p.id === plan.id ? { ...p, beneficios: updatedBeneficios } : p));
+  };
+
+  const currentBenefits = plan.beneficios || [];
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className={`relative overflow-hidden border-slate-200 shadow-sm hover:shadow-md transition-all bg-white ${isDragging ? 'opacity-50 ring-2 ring-blue-500' : ''}`}
+    >
+      <div className="p-6 space-y-6">
+        {/* Header: Name + Drag Handle + Toggle */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-2 flex-1">
+            <div
+              {...attributes}
+              {...listeners}
+              className="mt-1 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600"
+            >
+              <GripVertical className="h-5 w-5" />
+            </div>
+
+            <div className="space-y-1 flex-1">
+              <Input
+                value={plan.nome}
+                onChange={(e) =>
+                  setPlans(plans.map(p =>
+                    p.id === plan.id ? { ...p, nome: e.target.value } : p
+                  ))
+                }
+                className="font-bold text-lg border-transparent px-0 hover:border-input focus:border-input h-auto p-0 text-slate-900"
+                placeholder="Nome do Pacote"
+              />
+              <div className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${plan.ativo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                }`}>
+                <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${plan.ativo ? 'bg-emerald-500' : 'bg-slate-400'
+                  }`} />
+                {plan.ativo ? 'Ativo' : 'Inativo'}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center pl-2">
+            <Switch
+              checked={plan.ativo}
+              onCheckedChange={async (checked) => {
+                await handleUpdatePlan(plan.id, { ativo: checked });
+              }}
+              className="data-[state=checked]:bg-blue-600"
+            />
+          </div>
+        </div>
+
+        {/* Inputs */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Valor (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={plan.preco}
+                onChange={(e) =>
+                  setPlans(plans.map(p =>
+                    p.id === plan.id ? { ...p, preco: parseFloat(e.target.value) || 0 } : p
+                  ))
+                }
+                className="bg-slate-50 border-slate-200 h-10"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Qtd. Relatórios</Label>
+              <Input
+                type="number"
+                value={plan.relatorios_incluidos}
+                onChange={(e) =>
+                  setPlans(plans.map(p =>
+                    p.id === plan.id ? { ...p, relatorios_incluidos: parseInt(e.target.value) || 0 } : p
+                  ))
+                }
+                className="bg-slate-50 border-slate-200 h-10"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Descrição dos Benefícios</Label>
+
+            <div className="border rounded-md bg-slate-50 p-2 space-y-2">
+              {/* Benefits List Editor */}
+              <ScrollArea className="h-[120px] pr-2">
+                <div className="space-y-2">
+                  {currentBenefits.map((benefit, index) => (
+                    <div key={index} className="flex gap-2 items-center group">
+                      <Input
+                        value={benefit}
+                        onChange={(e) => handleBenefitChange(index, e.target.value)}
+                        className="h-8 bg-white text-sm"
+                        placeholder={`Benefício ${index + 1}`}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => {
+                          const newBenefits = currentBenefits.filter((_, i) => i !== index);
+                          setPlans(plans.map(p => p.id === plan.id ? { ...p, beneficios: newBenefits } : p));
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  {currentBenefits.length === 0 && (
+                    <p className="text-xs text-center text-slate-400 py-4 italic">Nenhum benefício listado.</p>
+                  )}
+                </div>
+              </ScrollArea>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-8 text-xs border-dashed text-slate-500 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50"
+                onClick={() => {
+                  setPlans(plans.map(p => p.id === plan.id ? { ...p, beneficios: [...currentBenefits, ""] } : p));
+                }}
+              >
+                <Plus className="w-3 h-3 mr-1" /> Adicionar Benefício
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Subtítulo (Opcional)</Label>
+            <Input
+              value={plan.descricao}
+              onChange={(e) =>
+                setPlans(plans.map(p =>
+                  p.id === plan.id ? { ...p, descricao: e.target.value } : p
+                ))
+              }
+              className="bg-slate-50 border-slate-200 h-9 text-sm"
+              placeholder="Ex: Ideal para iniciantes"
+            />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-3 pt-2">
+          <Button
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium h-10"
+            onClick={async () => {
+              // Filter out empty benefits before saving
+              const cleanBenefits = (plan.beneficios || [])
+                .map(b => b.trim())
+                .filter(b => b.length > 0);
+
+              await handleUpdatePlan(plan.id, {
+                nome: plan.nome,
+                preco: plan.preco,
+                relatorios_incluidos: plan.relatorios_incluidos,
+                descricao: plan.descricao,
+                beneficios: cleanBenefits
+              });
+            }}
+            disabled={loading}
+          >
+            <Save className="w-4 h-4 mr-2" />
+            Salvar Alterações
+          </Button>
+
+          <Button
+            variant="ghost"
+            className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 h-8 text-sm"
+            onClick={() => setDeletingPlan(plan.id)}
+            disabled={loading}
+          >
+            <Trash2 className="w-3.5 h-3.5 mr-2" />
+            Remover
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+};
 
 const AdminCMS = () => {
   const { isAdmin, loading: roleLoading } = useRole();
@@ -61,9 +301,15 @@ const AdminCMS = () => {
   const [landingContent, setLandingContent] = useState<Record<string, any>>({});
   const [editingBenefits, setEditingBenefits] = useState<{ planId: string; planName: string; benefits: string[] } | null>(null);
 
-
-
   const hasFetched = useRef(false);
+
+  // DnD Sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     if (isAdmin && !hasFetched.current) {
@@ -78,17 +324,19 @@ const AdminCMS = () => {
       const { data, error } = await supabase
         .from('plans')
         .select('*')
+        .order('position', { ascending: true })
         .order('preco', { ascending: true });
 
       if (error) throw error;
 
-      // Normalize null values to empty strings to prevent React warnings
+      // Normalize
       const normalizedData = (data as any[])?.map(plan => ({
         ...plan,
         descricao: plan.descricao ?? '',
-        beneficios: plan.beneficios ?? [],
+        beneficios: Array.isArray(plan.beneficios) ? plan.beneficios : [],
         preco: plan.preco ?? 0,
-        relatorios_incluidos: plan.relatorios_incluidos ?? 0
+        relatorios_incluidos: plan.relatorios_incluidos ?? 0,
+        position: plan.position ?? 0
       })) || [];
 
       setPlans(normalizedData);
@@ -99,29 +347,50 @@ const AdminCMS = () => {
   };
 
   const fetchLandingContent = async () => {
+    // ... logic remains same ...
     try {
-      const { data, error } = await supabase
-        .from('landing_content')
-        .select('*');
-
+      const { data, error } = await supabase.from('landing_content').select('*');
       if (error) throw error;
-
       const contentMap: Record<string, any> = {};
-      data?.forEach((item: any) => {
-        contentMap[item.section] = item;
-      });
+      data?.forEach((item: any) => { contentMap[item.section] = item; });
       setLandingContent(contentMap);
     } catch (error) {
       console.error('Error fetching landing content:', error);
     }
   };
 
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      setPlans((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over?.id);
+
+        const newItems = arrayMove(items, oldIndex, newIndex);
+
+        // Update positions in DB
+        // We do this asynchronously to not block UI
+        const updates = newItems.map((item, index) => ({
+          id: item.id,
+          position: index,
+        }));
+
+        (async () => {
+          for (const update of updates) {
+            await supabase.from('plans').update({ position: update.position } as any).eq('id', update.id);
+          }
+        })();
+
+        return newItems;
+      });
+    }
+  };
+
   const handleUpdatePlan = async (planId: string, updates: Partial<Plan>) => {
     setLoading(true);
-    console.log('🔍 handleUpdatePlan called with:', { planId, updates });
-
     try {
-      // Find the current plan to get existing values
+      // Find current plan
       const currentPlan = plans.find(p => p.id === planId);
       if (!currentPlan) {
         toast.error('Plano não encontrado');
@@ -129,53 +398,43 @@ const AdminCMS = () => {
         return;
       }
 
-      console.log('📋 Current plan:', currentPlan);
-
-      // Merge updates with current values for validation
       const dataToValidate = {
         nome: updates.nome ?? currentPlan.nome,
         preco: updates.preco ?? currentPlan.preco,
         relatorios_incluidos: updates.relatorios_incluidos ?? currentPlan.relatorios_incluidos,
         descricao: updates.descricao !== undefined ? updates.descricao : currentPlan.descricao,
+        beneficios: updates.beneficios ?? currentPlan.beneficios,
       };
 
-      console.log('✅ Data to validate:', dataToValidate);
-
-      // Validate the complete data
       const validationResult = PlanUpdateSchema.safeParse(dataToValidate);
 
       if (!validationResult.success) {
-        const firstError = validationResult.error.errors[0];
-        console.error('❌ Validation failed:', validationResult.error);
-        toast.error(firstError.message);
+        toast.error(validationResult.error.errors[0].message);
         setLoading(false);
         return;
       }
 
-      console.log('✅ Validation passed, updating database...');
+      // If updating 'ativo', include it
+      const finalUpdates: any = { ...dataToValidate };
+      if (updates.ativo !== undefined) finalUpdates.ativo = updates.ativo;
 
-      // Update with validated data (use dataToValidate, not updates!)
-      const { data: updatedData, error } = await supabase
+      const { error } = await supabase
         .from('plans')
-        .update(dataToValidate)
-        .eq('id', planId)
-        .select();
+        .update(finalUpdates)
+        .eq('id', planId);
 
-      if (error) {
-        console.error('❌ Database error:', error);
-        throw error;
-      }
-
-      console.log('✅ Database updated successfully:', updatedData);
+      if (error) throw error;
 
       await logAction('update_plan', { planId, updates });
-      toast.success('Plano atualizado com sucesso!');
+      toast.success(updates.ativo !== undefined
+        ? `Plano ${updates.ativo ? 'ativado' : 'desativado'} com sucesso!`
+        : 'Plano atualizado com sucesso!'
+      );
 
-      console.log('🔄 Fetching plans...');
+      // Optimiztic update already done via state in inputs, but refresh is good to sync
       await fetchPlans();
-      console.log('✅ Plans fetched');
     } catch (error) {
-      console.error('❌ Error updating plan:', error);
+      console.error('Error:', error);
       toast.error('Erro ao atualizar plano');
     } finally {
       setLoading(false);
@@ -183,70 +442,28 @@ const AdminCMS = () => {
   };
 
   const handleDeletePlan = async (planId: string) => {
+    // ... Same delete logic ...
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('plans')
-        .delete()
-        .eq('id', planId);
-
+      const { count, error: countError } = await supabase.from('subscriptions').select('*', { count: 'exact', head: true }).eq('plan_id', planId);
+      if (countError) throw countError;
+      if (count && count > 0) {
+        const { error: subDeleteError } = await supabase.from('subscriptions').delete().eq('plan_id', planId);
+        if (subDeleteError) throw new Error('Falha ao remover assinaturas vinculadas.');
+      }
+      const { error } = await supabase.from('plans').delete().eq('id', planId);
       if (error) throw error;
-
       await logAction('delete_plan', { planId });
       toast.success('Plano removido com sucesso!');
       setDeletingPlan(null);
       fetchPlans();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting plan:', error);
-      toast.error('Erro ao remover plano');
+      toast.error(error.message || 'Erro ao remover plano');
     } finally {
       setLoading(false);
     }
   };
-
-  const handleUpdateLandingContent = async (section: string, field: string, value: string) => {
-    setLoading(true);
-    try {
-      // Validate input
-      const validationResult = ContentUpdateSchema.safeParse({ value });
-
-      if (!validationResult.success) {
-        const firstError = validationResult.error.errors[0];
-        toast.error(firstError.message);
-        setLoading(false);
-        return;
-      }
-
-      const validatedValue = validationResult.data.value;
-      const content = landingContent[section];
-
-      if (content) {
-        const { error } = await supabase
-          .from('landing_content')
-          .update({ [field]: validatedValue })
-          .eq('section', section);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('landing_content')
-          .insert({ section, [field]: validatedValue });
-
-        if (error) throw error;
-      }
-
-      await logAction('update_landing_content', { section, field });
-      toast.success('Conteúdo atualizado com sucesso!');
-      fetchLandingContent();
-    } catch (error) {
-      console.error('Error updating landing content:', error);
-      toast.error('Erro ao atualizar conteúdo');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
 
   return (
     <AdminLayout>
@@ -254,323 +471,79 @@ const AdminCMS = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">CMS Planos</h1>
           <p className="text-muted-foreground">
-            Gerencie os planos de assinatura
+            Gerencie os planos de assinatura e pacotes de crédito da plataforma.
           </p>
         </div>
 
-        <div className="space-y-8">
-          {/* Single Credit Management Section */}
-          <div>
-            <div className="flex items-center justify-between mb-6">
+        <div className="space-y-12">
+          {/* Main Plans Section */}
+          <section>
+            <div className="flex items-center justify-between mb-8">
               <div>
-                <h2 className="text-2xl font-bold">Gestão de Crédito Avulso</h2>
-                <p className="text-sm text-muted-foreground mt-1">Configure o preço base para compra de relatórios avulsos</p>
+                <h2 className="text-2xl font-bold text-slate-800">Gestão de Crédito Avulso</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Arraste para reordenar os pacotes. Use o controle para ativar/desativar.
+                </p>
               </div>
             </div>
 
-            {plans.find(p => p.tipo === 'avulso') ? (
-              <div className="max-w-sm">
-                {plans.filter(p => p.tipo === 'avulso').map(plan => (
-                  <Card key={plan.id} className="relative overflow-hidden hover:shadow-lg transition-all">
-                    {/* Header */}
-                    <div className="p-6 pb-4">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <Input
-                            value={plan.nome}
-                            onChange={(e) =>
-                              setPlans(plans.map(p =>
-                                p.id === plan.id ? { ...p, nome: e.target.value } : p
-                              ))
-                            }
-                            className="text-lg font-semibold border-0 px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                            placeholder="Nome do Plano"
-                          />
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Checkbox
-                            id={`active-${plan.id}`}
-                            checked={plan.ativo}
-                            onCheckedChange={async (checked) => {
-                              await handleUpdatePlan(plan.id, { ativo: checked as boolean });
-                            }}
-                          />
-                          <Label
-                            htmlFor={`active-${plan.id}`}
-                            className={`text-xs px-2 py-1 rounded-full cursor-pointer ${plan.ativo
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted text-muted-foreground'
-                              }`}
-                          >
-                            {plan.ativo ? 'Ativo' : 'Inativo'}
-                          </Label>
-                        </div>
-                      </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={plans.map(p => p.id)}
+                strategy={rectSortingStrategy}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {plans.map((plan) => (
+                    <SortablePlanCard
+                      key={plan.id}
+                      plan={plan}
+                      plans={plans}
+                      setPlans={setPlans}
+                      handleUpdatePlan={handleUpdatePlan}
+                      setDeletingPlan={setDeletingPlan}
+                      loading={loading}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </section>
 
-                      {/* Price */}
-                      <div className="mb-4">
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-sm text-muted-foreground">R$</span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={plan.preco}
-                            onChange={(e) =>
-                              setPlans(plans.map(p =>
-                                p.id === plan.id ? { ...p, preco: parseFloat(e.target.value) || 0 } : p
-                              ))
-                            }
-                            className="text-3xl font-bold border-0 px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
-                          />
-                        </div>
-                      </div>
+          {/* Bottom Section: Additional Packages */}
+          <section>
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-slate-800">Pacotes de Créditos</h2>
+              <p className="text-sm text-muted-foreground mt-1">Gerencie os pacotes disponíveis para compra avulsa.</p>
+            </div>
 
-                      {/* Reports Count */}
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Relatórios incluídos</span>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={plan.relatorios_incluidos}
-                            onChange={(e) =>
-                              setPlans(plans.map(p =>
-                                p.id === plan.id ? { ...p, relatorios_incluidos: parseInt(e.target.value) || 1 } : p
-                              ))
-                            }
-                            className="w-20 h-8 text-right font-medium"
-                          />
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Tipo: {plan.tipo.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </div>
-                      </div>
-
-                      {/* Description */}
-                      <div className="mb-4">
-                        <Textarea
-                          value={plan.descricao || ''}
-                          onChange={(e) =>
-                            setPlans(plans.map(p =>
-                              p.id === plan.id ? { ...p, descricao: e.target.value } : p
-                            ))
-                          }
-                          placeholder="Descrição do plano..."
-                          rows={3}
-                          className="text-sm resize-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="p-4 pt-0 space-y-2">
-                      <Button
-                        onClick={async () => {
-                          await handleUpdatePlan(plan.id, {
-                            nome: plan.nome,
-                            preco: plan.preco,
-                            relatorios_incluidos: plan.relatorios_incluidos,
-                            descricao: plan.descricao,
-                          });
-                        }}
-                        disabled={loading}
-                        className="w-full"
-                      >
-                        <Save className="mr-2 h-4 w-4" />
-                        Salvar Alterações
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setDeletingPlan(plan.id)}
-                        disabled={loading}
-                        className="w-full text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Remover
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
+            <div className="border-2 border-dashed border-slate-200 rounded-xl p-12 bg-slate-50/50 flex flex-col items-center justify-center text-center space-y-4">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-2">
+                <Plus className="w-8 h-8 text-slate-300" />
               </div>
-            ) : (
-              <Card className="p-6 flex flex-col items-center justify-center text-center space-y-4 max-w-sm">
-                <div className="p-3 rounded-full bg-muted">
-                  <Plus className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium">Configuração não encontrada</h3>
-                  <p className="text-muted-foreground">O plano de crédito avulso ainda não foi inicializado.</p>
-                </div>
-                <Button
-                  onClick={async () => {
-                    setLoading(true);
-                    try {
-                      const { error } = await supabase.from('plans').insert({
-                        nome: 'Crédito Avulso',
-                        tipo: 'avulso',
-                        preco: 34.99,
-                        relatorios_incluidos: 1,
-                        descricao: 'Crédito para 1 relatório avulso',
-                        ativo: true
-                      });
-                      if (error) throw error;
-                      toast.success('Configuração inicializada!');
-                      await fetchPlans();
-                    } catch (e) {
-                      console.error(e);
-                      toast.error('Erro ao inicializar');
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                  disabled={loading}
-                >
-                  Inicializar Crédito Avulso
+              <div className="space-y-1">
+                <h3 className="font-semibold text-slate-900 text-lg">Nenhum pacote adicional configurado</h3>
+                <p className="text-slate-500 max-w-md mx-auto">
+                  Adicione pacotes de créditos extras para que seus usuários possam expandir seus limites sem trocar de plano.
+                </p>
+              </div>
+              <div className="pt-4 flex items-center gap-4">
+                <Button variant="link" className="text-blue-600 font-medium">
+                  Configurar agora &rarr;
                 </Button>
-              </Card>
-            )}
-          </div>
-
-          {/* Subscription Plans Section */}
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-2xl font-bold">Planos de Assinatura</h2>
-                <p className="text-sm text-muted-foreground mt-1">Gerencie os planos de assinatura disponíveis</p>
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-md rounded-full px-6"
+                  onClick={() => setShowCreateDialog(true)}
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Criar Novo Plano
+                </Button>
               </div>
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Criar Novo Plano
-              </Button>
             </div>
-
-            {/* Card Grid Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {plans.filter(p => p.tipo !== 'avulso').map((plan) => (
-                <Card key={plan.id} className="relative overflow-hidden hover:shadow-lg transition-all">
-                  {/* Header */}
-                  <div className="p-6 pb-4">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <Input
-                          value={plan.nome}
-                          onChange={(e) =>
-                            setPlans(plans.map(p =>
-                              p.id === plan.id ? { ...p, nome: e.target.value } : p
-                            ))
-                          }
-                          className="text-lg font-semibold border-0 px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                          placeholder="Nome do Plano"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Checkbox
-                          id={`active-${plan.id}`}
-                          checked={plan.ativo}
-                          onCheckedChange={async (checked) => {
-                            await handleUpdatePlan(plan.id, { ativo: checked as boolean });
-                          }}
-                        />
-                        <Label
-                          htmlFor={`active-${plan.id}`}
-                          className={`text-xs px-2 py-1 rounded-full cursor-pointer ${plan.ativo
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted text-muted-foreground'
-                            }`}
-                        >
-                          {plan.ativo ? 'Ativo' : 'Inativo'}
-                        </Label>
-                      </div>
-                    </div>
-
-                    {/* Price */}
-                    <div className="mb-4">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-sm text-muted-foreground">R$</span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={plan.preco}
-                          onChange={(e) =>
-                            setPlans(plans.map(p =>
-                              p.id === plan.id ? { ...p, preco: parseFloat(e.target.value) || 0 } : p
-                            ))
-                          }
-                          className="text-3xl font-bold border-0 px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Reports Count */}
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Relatórios incluídos</span>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={plan.relatorios_incluidos}
-                          onChange={(e) =>
-                            setPlans(plans.map(p =>
-                              p.id === plan.id ? { ...p, relatorios_incluidos: parseInt(e.target.value) || 1 } : p
-                            ))
-                          }
-                          className="w-20 h-8 text-right font-medium"
-                        />
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Tipo: {plan.tipo.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <div className="mb-4">
-                      <Textarea
-                        value={plan.descricao || ''}
-                        onChange={(e) =>
-                          setPlans(plans.map(p =>
-                            p.id === plan.id ? { ...p, descricao: e.target.value } : p
-                          ))
-                        }
-                        placeholder="Descrição do plano..."
-                        rows={3}
-                        className="text-sm resize-none"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="p-4 pt-0 space-y-2">
-                    <Button
-                      onClick={async () => {
-                        await handleUpdatePlan(plan.id, {
-                          nome: plan.nome,
-                          preco: plan.preco,
-                          relatorios_incluidos: plan.relatorios_incluidos,
-                          descricao: plan.descricao,
-                        });
-                      }}
-                      disabled={loading}
-                      className="w-full"
-                    >
-                      <Save className="mr-2 h-4 w-4" />
-                      Salvar Alterações
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setDeletingPlan(plan.id)}
-                      disabled={loading}
-                      className="w-full text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Remover
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
+          </section>
         </div>
       </div>
 

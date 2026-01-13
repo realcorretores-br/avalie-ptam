@@ -70,10 +70,8 @@ export const PTAMForm = () => {
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
 
-  // Check if user effectively has a recurring plan
-  const hasRecurringPlan = subscription &&
-    (subscription.status === 'active' || subscription.status === 'trialing') &&
-    (subscription.plans as any)?.tipo !== 'avulso';
+  // Check if user effectively has a recurring plan (Logic removed - all users can save drafts)
+  // const hasRecurringPlan = ...
 
   // Persistence Key
   const STORAGE_KEY = `ptam_form_draft_${user?.id || 'guest'}`;
@@ -332,15 +330,20 @@ export const PTAMForm = () => {
     }
 
     try {
-      // Validar disponibilidade de créditos Logic
-      const isAvulso = (subscription.plans as any)?.tipo === 'avulso';
-      const isExpired = !isAvulso && subscription.data_expiracao && new Date(subscription.data_expiracao) < new Date();
+      // Validar expiração (Regra: Congelar tudo)
+      const isExpired = subscription.data_expiracao ? new Date(subscription.data_expiracao) < new Date() : false;
 
-      const planRemaining = isExpired ? 0 : Math.max(0, (subscription.relatorios_disponiveis || 0) - (subscription.relatorios_usados || 0));
+      if (isExpired) {
+        toast.error('Seus créditos expiraram. Realize uma nova compra para reativar seu saldo.');
+        return;
+      }
+
+      // Validar disponibilidade de créditos (Consolidado)
+      const planRemaining = Math.max(0, (subscription.relatorios_disponiveis || 0) - (subscription.relatorios_usados || 0));
       const extraRemaining = subscription.creditos_extra || 0;
 
       if (planRemaining <= 0 && extraRemaining <= 0) {
-        toast.error('Você não tem relatórios disponíveis. Compre mais créditos ou renove sua assinatura.');
+        toast.error('Saldo insuficiente. Adquira um novo pacote de créditos para finalizar.');
         return;
       }
 
@@ -603,40 +606,20 @@ export const PTAMForm = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {hasRecurringPlan ? "Você tem alterações não salvas" : "Atenção: Você não possui um plano ativo"}
+              Você tem alterações não salvas
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              {hasRecurringPlan ? (
-                "Se você sair agora, as alterações não salvas serão perdidas. Deseja salvar como rascunho antes de sair?"
-              ) : (
-                <>
-                  <p>Você não possui um plano ativo (Mensal ou Anual).</p>
-                  <p className="font-bold text-destructive">
-                    Se sair agora, você perderá este rascunho e todo o progresso feito, pois o salvamento é exclusivo para assinantes.
-                  </p>
-                </>
-              )}
+              Se você sair agora, as alterações não salvas serão perdidas. Deseja salvar como rascunho antes de sair?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => blocker.reset()}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleBlockerDiscard} className="bg-destructive hover:bg-destructive/90 text-white">
-              {hasRecurringPlan ? "Sair sem Salvar" : "Sair e Perder Dados"}
+              Sair sem Salvar
             </AlertDialogAction>
-            {hasRecurringPlan && (
-              <AlertDialogAction onClick={handleBlockerSave}>
-                Salvar e Sair
-              </AlertDialogAction>
-            )}
-            {!hasRecurringPlan && (
-              <Button variant="default" onClick={() => {
-                // Save locally just in case? No, honesty first.
-                // Redirect to plans?
-                window.open('/dashboard/planos', '_blank');
-              }}>
-                Assinar Agora
-              </Button>
-            )}
+            <AlertDialogAction onClick={handleBlockerSave}>
+              Salvar e Sair
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

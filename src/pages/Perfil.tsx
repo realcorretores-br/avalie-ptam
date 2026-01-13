@@ -25,7 +25,7 @@ import { ThemeColorPicker } from "@/components/ThemeColorPicker";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { maskCPF, maskRG, maskCNPJ } from "@/lib/masks";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
-import { AddCreditsModal } from "@/components/AddCreditsModal";
+
 
 interface PaymentHistory {
   id: string;
@@ -52,23 +52,28 @@ const Perfil = () => {
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<Tab>('perfil');
+  const [activeTab, setActiveTab] = useState<Tab>((searchParams.get('tab') as Tab) || 'perfil');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['perfil', 'assinatura', 'pagamentos', 'anotacoes'].includes(tab)) {
+      setActiveTab(tab as Tab);
+    }
+  }, [searchParams]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [estrangeiro, setEstrangeiro] = useState(profile?.estrangeiro || false);
   const [tipoAvaliador, setTipoAvaliador] = useState(profile?.tipo_avaliador || "");
   const [logoUrl, setLogoUrl] = useState((profile as any)?.logo_url || "");
-  const [autoRenew, setAutoRenew] = useState(true);
-  const [updatingAutoRenew, setUpdatingAutoRenew] = useState(false);
-  const [showCreditsModal, setShowCreditsModal] = useState(false);
+
 
   const [themeColor, setThemeColor] = useState(profile?.theme_color || "blue");
 
   useThemeColor();
 
-  const isAvulso = (subscription as any)?.plans?.tipo === 'avulso';
-  const canChangeTheme = !isAvulso;
+  useThemeColor();
+  const canChangeTheme = true;
 
   const [formData, setFormData] = useState({
     cpf: profile?.cpf || '',
@@ -119,52 +124,9 @@ const Perfil = () => {
   }, [profile]);
 
 
-  const fetchAutoRenewStatus = useCallback(async () => {
-    if (!user) return;
 
-    try {
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('auto_renew')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle();
 
-      if (error) throw error;
-      if (data) {
-        setAutoRenew(data.auto_renew);
-      }
-    } catch (error) {
-      console.error('Error fetching auto-renew status:', error);
-    }
-  }, [user]);
 
-  const handleToggleAutoRenew = async (enabled: boolean) => {
-    if (!user || !subscription) return;
-
-    setUpdatingAutoRenew(true);
-    try {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({ auto_renew: enabled })
-        .eq('user_id', user.id)
-        .eq('status', 'active');
-
-      if (error) throw error;
-
-      setAutoRenew(enabled);
-      toast.success(
-        enabled
-          ? 'Renovação automática ativada! Sua assinatura será renovada automaticamente.'
-          : 'Renovação automática desativada. Lembre-se de renovar manualmente antes do vencimento.'
-      );
-    } catch (error) {
-      console.error('Error updating auto-renew:', error);
-      toast.error('Erro ao atualizar configuração de renovação');
-    } finally {
-      setUpdatingAutoRenew(false);
-    }
-  };
 
   const fetchPaymentHistory = useCallback(async () => {
     if (!user) return;
@@ -222,9 +184,8 @@ const Perfil = () => {
   useEffect(() => {
     if (user) {
       fetchPaymentHistory();
-      fetchAutoRenewStatus();
     }
-  }, [user, fetchPaymentHistory, fetchAutoRenewStatus]);
+  }, [user, fetchPaymentHistory]);
 
 
 
@@ -377,8 +338,8 @@ const Perfil = () => {
                 onClick={() => setActiveTab('assinatura')}
                 className="gap-2"
               >
-                <CreditCard className="h-4 w-4" />
-                Assinatura
+                <Coins className="h-4 w-4" />
+                Meus Créditos
               </Button>
             )}
             {settings.enable_payment_history && (
@@ -682,92 +643,46 @@ const Perfil = () => {
           {activeTab === 'assinatura' && settings.enable_subscription && (
             <Card className="p-6">
               <div className="flex items-center gap-3 mb-6">
-                <CreditCard className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">Assinatura</h2>
+                <Coins className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Meus Créditos</h2>
               </div>
-              {subscription ? (
-                <div className="space-y-4">
-                  <div>
-                    <Label>Plano Atual</Label>
-                    <p className="text-lg font-medium">{(subscription as any).plans?.nome}</p>
-                  </div>
-                  <div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-3 bg-muted rounded-lg">
-                        <Label className="text-xs text-muted-foreground">Créditos do Plano</Label>
-                        {(subscription.plans?.tipo !== 'avulso' && subscription.data_expiracao && new Date(subscription.data_expiracao) < new Date()) ? (
-                          <div>
-                            <p className="text-lg font-bold text-red-500">Congelado</p>
-                            <p className="text-xs text-red-400">Renove para liberar</p>
-                          </div>
-                        ) : (
-                          <p className="text-lg font-medium">
-                            {Math.max(0, subscription.relatorios_disponiveis - subscription.relatorios_usados)} / {subscription.relatorios_disponiveis}
-                          </p>
-                        )}
-                      </div>
-                      <div className="p-3 bg-muted rounded-lg">
-                        <Label className="text-xs text-muted-foreground">Créditos Avulsos (Vitalício)</Label>
-                        <p className="text-lg font-medium text-green-600">
-                          {subscription.creditos_extra || 0}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Only show expiration date for non-avulso plans */}
-                  {(subscription as any).plans?.tipo !== 'avulso' && subscription.data_expiracao && (
+              <div className="space-y-6">
+                <div className="p-4 border rounded-lg bg-card">
+                  <div className="flex justify-between items-start">
                     <div>
-                      <Label>Renovação</Label>
-                      <p className="text-lg font-medium">
-                        {new Date(subscription.data_expiracao).toLocaleDateString('pt-BR')}
+                      <h3 className="font-semibold text-lg">{subscription?.plans?.nome || "Sem Créditos"}</h3>
+                      <p className="text-muted-foreground">
+                        {subscription?.relatorios_disponiveis
+                          ? `${(subscription.relatorios_disponiveis - (subscription.relatorios_usados || 0)) + (subscription.creditos_extra || 0)} créditos disponíveis`
+                          : 'Adquira um pacote para começar'}
                       </p>
                     </div>
-                  )}
+                  </div>
 
-                  {/* Auto Renew Toggle - Only show for monthly plans */}
-                  {((subscription as any).plans?.tipo === 'mensal_basico' || (subscription as any).plans?.tipo === 'mensal_pro') && (
-                    <div className="space-y-2 pt-4 border-t">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="auto-renew">Renovação Automática</Label>
-                          <p className="text-sm text-muted-foreground">
-                            {autoRenew
-                              ? 'Sua assinatura será renovada automaticamente no vencimento'
-                              : 'Você precisará renovar manualmente quando a assinatura expirar'}
-                          </p>
-                        </div>
-                        <Checkbox
-                          id="auto-renew"
-                          checked={autoRenew}
-                          onCheckedChange={handleToggleAutoRenew}
-                          disabled={updatingAutoRenew}
-                        />
+                  {subscription && (
+                    <div className="mt-4 space-y-2 text-sm">
+                      <div className="flex justify-between py-1 border-b">
+                        <span className="text-muted-foreground">Pacote Atual</span>
+                        <span className="font-medium">{subscription.plans?.nome || '-'}</span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b">
+                        <span className="text-muted-foreground">Saldo Total</span>
+                        <span className="font-bold text-lg">
+                          {(subscription.relatorios_disponiveis || 0) + (subscription.creditos_extra || 0) - (subscription.relatorios_usados || 0)}
+                        </span>
                       </div>
                     </div>
                   )}
+                </div>
 
-                  <div className="flex gap-2 pt-4">
-                    <Button variant="outline" onClick={() => navigate('/dashboard/planos')}>
-                      Alterar Plano
-                    </Button>
-                    <Button
-                      className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                      onClick={() => setShowCreditsModal(true)}
-                    >
-                      <Coins className="h-4 w-4" />
-                      Comprar crédito avulso
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-6">
-                  <p className="text-lg font-medium mb-4">Você ainda não possui um plano ativo</p>
-                  <Button onClick={() => navigate('/dashboard/planos')}>
-                    Ver Planos Disponíveis
-                  </Button>
-                </div>
-              )}
+                <Button
+                  className="w-full sm:w-auto mt-4"
+                  onClick={() => navigate('/dashboard/planos')}
+                >
+                  Comprar Mais Créditos
+                </Button>
+              </div>
             </Card>
           )}
 
@@ -834,10 +749,7 @@ const Perfil = () => {
         </div>
       </div>
 
-      <AddCreditsModal
-        open={showCreditsModal}
-        onOpenChange={setShowCreditsModal}
-      />
+
     </div>
   );
 };
