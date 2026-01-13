@@ -112,9 +112,29 @@ serve(async (req) => {
                         throw updateError;
                     }
                 } else {
-                    console.warn("No subscription found for user:", user_id);
-                    // Optionally create a subscription row if missing? 
-                    // For now, assuming user must have a row (created on signup).
+                    console.warn("No subscription found for user:", user_id, "- Creating new subscription record.");
+
+                    const newExpirationDate = new Date();
+                    newExpirationDate.setDate(newExpirationDate.getDate() + 30); // NOW + 30 days
+
+                    const { error: insertError } = await supabase
+                        .from('subscriptions')
+                        .insert({
+                            user_id: user_id,
+                            relatorios_disponiveis: Number(quantity),
+                            relatorios_usados: 0,
+                            creditos_extra: 0,
+                            status: 'active',
+                            data_expiracao: newExpirationDate.toISOString(),
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        });
+
+                    if (insertError) {
+                        console.error("Error creating new subscription:", insertError);
+                        throw insertError;
+                    }
+                    console.log(`Created new subscription for user ${user_id} with ${quantity} credits.`);
                 }
             }
         }

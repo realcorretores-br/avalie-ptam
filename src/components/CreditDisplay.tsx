@@ -51,14 +51,7 @@ export const CreditDisplay = ({ hideReportsLine = false }: CreditDisplayProps) =
             )}
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => window.location.href = '/dashboard/planos'}
-          className="ml-auto"
-        >
-          Comprar
-        </Button>
+
       </div>
     </Card>
   );

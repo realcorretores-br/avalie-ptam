@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
+import { exportToPDF } from "@/lib/exportUtils";
 
 // New Components
 import { MetricsFilters } from "@/components/metrics/MetricsFilters";
@@ -30,6 +31,7 @@ export default function Metricas() {
   const navigate = useNavigate();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(true);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   const [kpiData, setKpiData] = useState<MetricsData>({
     total: 0,
@@ -219,6 +221,20 @@ export default function Metricas() {
     fetchMetrics();
   }, [fetchMetrics]);
 
+  const handleExport = async () => {
+    if (!reportRef.current) return;
+    toast.loading("Gerando relatório PDF...");
+    try {
+      await exportToPDF([reportRef.current], "Relatorio_Metricas.pdf");
+      toast.dismiss();
+      toast.success("Relatório baixado com sucesso!");
+    } catch (error) {
+      console.error(error);
+      toast.dismiss();
+      toast.error("Erro ao gerar PDF.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50/50">
 
@@ -234,7 +250,7 @@ export default function Metricas() {
             </div>
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white shadow-md gap-2"
-              onClick={() => toast.success("Relatório enviado para o seu e-mail!")}
+              onClick={handleExport}
             >
               <Download className="w-4 h-4" />
               Exportar Relatório
@@ -251,7 +267,7 @@ export default function Metricas() {
             </div>
 
             {/* Right Column (Content) - Takes 9 columns */}
-            <div className="lg:col-span-9 space-y-8">
+            <div className="lg:col-span-9 space-y-8" ref={reportRef}>
 
               {/* KPI Cards */}
               <KPIStats data={kpiData} />
@@ -270,3 +286,4 @@ export default function Metricas() {
     </div>
   );
 }
+
