@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { createRoot } from "react-dom/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
@@ -68,9 +69,7 @@ const AvaliacoesSalvas = () => {
 
     const reportCount = subscription.relatorios_disponiveis || 0;
 
-    // Fallback logic
-    if (reportCount <= 5) return 1;
-    if (reportCount <= 10) return 3;
+    // Fallback logic - Default limit is 25 per user request
     return 25;
   };
 
@@ -99,23 +98,41 @@ const AvaliacoesSalvas = () => {
   }, [user, navigate]);
 
   const handleExport = async (avaliacao: Avaliacao) => {
+    let reactRoot: any = null;
+    const tempContainer = document.createElement('div');
+
     try {
-      // Container invisível, porém acoplado ao DOM (garante CSS aplicado)
-      const tempContainer = document.createElement('div');
-      tempContainer.style.cssText = 'position: fixed; top: 0; left: 0; width: 210mm; opacity: 0; pointer-events: none; z-index: -1000; background: #ffffff;';
+      // Container invisível (atrás do conteúdo), mas visível para o renderizador
+      tempContainer.style.cssText = 'position: fixed; left: 0; top: 0; width: 210mm; min-height: 297mm; z-index: -9999; background: #ffffff; overflow: visible;';
       document.body.appendChild(tempContainer);
 
       const root = document.createElement('div');
       root.id = 'temp-preview-' + Date.now();
       tempContainer.appendChild(root);
 
-      const { createRoot } = await import('react-dom/client');
-      const reactRoot = createRoot(root);
+      const data = avaliacao.form_data as unknown as PTAMData;
+      reactRoot = createRoot(root);
 
-      // Renderizar e aguardar tempo adequado para renderização completa
+      // Renderizar e aguardar presença de conteúdo real
       await new Promise<void>((resolve) => {
-        reactRoot.render(<PTAMPreview data={avaliacao.form_data as unknown as PTAMData} />);
-        setTimeout(resolve, 1200);
+        reactRoot.render(<PTAMPreview data={data} />);
+
+        // Polling para garantir que o conteúdo foi renderizado
+        let attempts = 0;
+        const checkContent = setInterval(() => {
+          const pages = root.querySelectorAll('.a4-page');
+          // Verificar se temos páginas e se elas têm conteúdo substancial
+          if (pages.length > 0 && (root.innerText.length > 500)) {
+            clearInterval(checkContent);
+            // Pequeno delay extra para garantir carregamento de imagens/fontes
+            setTimeout(() => resolve(), 500);
+          }
+          attempts++;
+          if (attempts > 100) { // 10 segundos timeout
+            clearInterval(checkContent);
+            resolve(); // Tenta exportar mesmo assim
+          }
+        }, 100);
       });
 
       // Inliner de imagens para evitar erros de CORS/tainted canvas
@@ -144,12 +161,14 @@ const AvaliacoesSalvas = () => {
         })
       );
 
-      toast.loading('Gerando PDF...');
-      await exportToPDF([root as HTMLElement], `relatorio_${avaliacao.id}.pdf`);
+      // Nome amigável para o arquivo
+      const safeName = data.solicitanteNome?.replace(/[^a-z0-9]/gi, '_').substring(0, 50) || 'Relatorio';
+      const fileName = `PTAM_${safeName}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
 
-      // Limpar
-      reactRoot.unmount();
-      document.body.removeChild(tempContainer);
+      toast.loading('Gerando PDF...');
+      // Selecionar apenas as páginas oficialmente renderizadas
+      const pageElements = Array.from(root.querySelectorAll('.a4-page')) as HTMLElement[];
+      await exportToPDF(pageElements, fileName);
 
       toast.dismiss();
       toast.success('PDF baixado com sucesso!');
@@ -157,6 +176,14 @@ const AvaliacoesSalvas = () => {
       toast.dismiss();
       toast.error('Erro ao gerar PDF. Tente novamente.');
       console.error('Erro detalhado ao exportar PDF:', error);
+    } finally {
+      // Limpar sempre, mesmo em caso de erro
+      if (reactRoot) {
+        setTimeout(() => reactRoot.unmount(), 0);
+      }
+      if (document.body.contains(tempContainer)) {
+        document.body.removeChild(tempContainer);
+      }
     }
   };
 

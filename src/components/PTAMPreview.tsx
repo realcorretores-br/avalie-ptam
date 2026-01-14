@@ -2,6 +2,7 @@ import { PTAMData } from "@/types/ptam";
 import { formatDateToDDMMYYYY } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { A4Page } from "./A4Page";
+import { PhotoOrganizer } from "./PhotoOrganizer";
 
 interface PTAMPreviewProps {
   data: PTAMData;
@@ -12,21 +13,62 @@ export const PTAMPreview = ({ data }: PTAMPreviewProps) => {
   const logoUrl = (profile as any)?.logo_url;
 
   return (
-    <div id="ptam-preview-content" className="flex flex-col items-center bg-muted/30 print:bg-white">
+    <div id="ptam-preview-content" className="flex flex-col items-center bg-muted/30 print:bg-white print:block">
       <style>{`
         @media print {
+          /* Reset Global Roots to avoid "100vh" clipping/compression */
+          html, body, #root {
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            width: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          /* Define Page Size - Strict A4 Portrait */
           @page {
-            size: A4;
+            size: A4 portrait;
             margin: 0;
           }
+
+          /* Basic Print Resets */
           body {
             background: white !important;
             -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            font-size: 12pt;
           }
+
+          /* Ensure the Preview Content is the only thing controlling flow */
+          #ptam-preview-content {
+            display: block !important;
+            position: relative !important;
+            width: 210mm !important;
+            margin: 0 auto !important;
+            /* Remove unwanted flex/grid impacts from parents if any leak through */
+            left: auto !important;
+            top: auto !important;
+            overflow: visible !important;
+          }
+
+          /* A4 Page Component Style Reset */
           .a4-page {
             margin: 0 !important;
             box-shadow: none !important;
             page-break-after: always;
+            break-after: page;
+            border: none !important;
+            width: 210mm !important;
+            height: auto !important; /* Allow expansion */
+            min-height: 297mm !important;
+            overflow: visible !important; /* Show overflow content */
+            break-inside: auto;
+          }
+           
+          /* Hide Scrollbars */
+          ::-webkit-scrollbar {
+            display: none;
           }
         }
       `}</style>
@@ -147,13 +189,12 @@ export const PTAMPreview = ({ data }: PTAMPreviewProps) => {
               </div>
             )}
 
-            {data.imovelImagensComplementares?.map((img, index) => (
-              <div key={index}>
-                <div className="rounded-lg border overflow-hidden h-[200px]">
-                  <img src={img.annotatedUrl || img.url} alt={`Imagem ${index + 1}`} className="w-full h-full object-cover" />
-                </div>
-              </div>
-            ))}
+
+
+            {/* Organizador de Fotos (Verticais/Horizontais) */}
+            <div className="col-span-2">
+              <PhotoOrganizer images={data.imovelImagensComplementares} />
+            </div>
           </div>
         </section>
 
@@ -290,6 +331,6 @@ export const PTAMPreview = ({ data }: PTAMPreviewProps) => {
           </div>
         </section>
       </A4Page>
-    </div>
+    </div >
   );
 };

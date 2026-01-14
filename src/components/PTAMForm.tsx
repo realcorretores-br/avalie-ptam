@@ -1,3 +1,4 @@
+// PTAMForm Updated for Session Persistence
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation, useBlocker } from "react-router-dom"; // Added useBlocker
 import { PTAMData, defaultPTAMData } from "@/types/ptam";
@@ -73,10 +74,7 @@ export const PTAMForm = () => {
   // Check if user effectively has a recurring plan (Logic removed - all users can save drafts)
   // const hasRecurringPlan = ...
 
-  // Persistence Key
-  const STORAGE_KEY = `ptam_form_draft_${user?.id || 'guest'}`;
-
-  // Load initial data logic - Improved Step Persistence
+  // Load initial data logic - Only from DB/Navigation State, no local auto-save
   useEffect(() => {
     if (location.state?.editData) {
       setFormData(location.state.editData as PTAMData);
@@ -87,56 +85,10 @@ export const PTAMForm = () => {
         // Restore section from DB data
         setCurrentSection(location.state.editData.savedSection);
       }
-    } else {
-      // Restore from Local Storage
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.user_id === user?.id) {
-            setFormData(prev => ({ ...prev, ...parsed.formData }));
-            // Ensure section is restored and valid
-            if (typeof parsed.currentSection === 'number' && parsed.currentSection >= 0) {
-              setCurrentSection(parsed.currentSection);
-            }
-            setDraftId(parsed.draftId || null);
-            toast.info('Rascunho recuperado automaticamente.');
-          }
-        } catch (e) {
-          console.error('Error parsing local storage draft', e);
-        }
-      } else if (!location.state?.skipTemplate) {
-        setShowTemplateSelector(true);
-      }
+    } else if (!location.state?.skipTemplate) {
+      setShowTemplateSelector(true);
     }
-  }, [user?.id, STORAGE_KEY, location.state]);
-
-  // Save to Local Storage
-  useEffect(() => {
-    if (user?.id && formData) {
-      const stateToSave = {
-        formData,
-        currentSection,
-        draftId,
-        user_id: user.id,
-        timestamp: Date.now()
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-    }
-  }, [formData, currentSection, draftId, user?.id, STORAGE_KEY]);
-
-  // Handle Browser Close/Reload
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (formData && Object.keys(formData).length > 0 && !isFinalized) {
-        e.preventDefault();
-        e.returnValue = '';
-        return '';
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [formData, isFinalized]);
+  }, [location.state]);
 
   // Internal Navigation Blocker
   const blocker = useBlocker(
@@ -148,7 +100,7 @@ export const PTAMForm = () => {
 
   const handleBlockerDiscard = () => {
     if (blocker.state === "blocked") {
-      localStorage.removeItem(STORAGE_KEY); // Discard logic
+      // sessionStorage.removeItem(STORAGE_KEY); // Keep session for resume
       blocker.proceed();
     }
   };
@@ -160,71 +112,8 @@ export const PTAMForm = () => {
     }
   };
 
-  //  // Auto-save: salvar automaticamente a cada alteração
-  useEffect(() => {
-    if (!user || !formData || Object.keys(formData).length === 0) return;
-
-    // Don't auto-save if we are in the middle of blocking navigation (exit confirmation)
-    if (blocker.state === "blocked") return;
-
-    const autoSave = async () => {
-      try {
-        // Incluir currentSection no form_data para persistência entre navegadores
-        const formDataWithSection = { ...formData, savedSection: currentSection };
-
-        const dataToSave = {
-          user_id: user.id,
-          form_data: formDataWithSection as any,
-          status: 'rascunho',
-          finalidade: formData.finalidade || null,
-          tipo_imovel: formData.tipoImovel || null,
-          endereco_imovel: formData.enderecoImovel || null,
-          valor_final: formData.valorMedio ? parseFloat(formData.valorMedio.replace(/[^\d,]/g, '').replace(',', '.') || '0') : null
-        };
-
-        if (draftId) {
-          // Atualizar rascunho existente
-          await supabase
-            .from('avaliacoes')
-            .update(dataToSave)
-            .eq('id', draftId);
-        } else {
-          // Verificar limite de rascunhos antes do auto-save
-          const { count } = await supabase
-            .from('avaliacoes')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('status', 'rascunho');
-
-          if (count !== null && count >= 5) {
-            // Silently fail or maybe show a toast only once? 
-            // For auto-save, it's better not to spam toasts. 
-            // But the user needs to know why it's not saving.
-            // Let's log it and maybe show a toast if it's the first time failing?
-            // For now, just return to prevent saving.
-            console.log('Auto-save skipped: Draft limit reached');
-            return;
-          }
-
-          // Criar novo rascunho
-          const { data, error } = await supabase
-            .from('avaliacoes')
-            .insert([dataToSave])
-            .select()
-            .single();
-
-          if (!error && data) {
-            setDraftId(data.id);
-          }
-        }
-      } catch (error) {
-        console.error('Erro no auto-save:', error);
-      }
-    };
-
-    const timeoutId = setTimeout(autoSave, 2000);
-    return () => clearTimeout(timeoutId);
-  }, [formData, user, draftId, currentSection, blocker.state]); // Added blocker.state dependency
+  // Auto-save removido para evitar rascunhos indesejados. 
+  // O usuário deve salvar explicitamente ou via modal de saída.
 
   const handleTemplateSelect = (templateData: any) => {
     if (Object.keys(templateData).length > 0) {
@@ -273,8 +162,8 @@ export const PTAMForm = () => {
           .eq('user_id', user.id)
           .eq('status', 'rascunho');
 
-        if (count !== null && count >= 5) {
-          toast.error('Limite de 5 rascunhos atingido. Exclua ou finalize um rascunho existente para criar um novo.');
+        if (count !== null && count >= 3) {
+          toast.error('Limite de 3 rascunhos atingido. Exclua ou finalize um rascunho existente para criar um novo.');
           return;
         }
 
@@ -290,6 +179,7 @@ export const PTAMForm = () => {
       }
 
       toast.success('Avaliação salva como rascunho. Você pode continuar depois em Avaliações Salvas.');
+
       navigate('/dashboard/avaliacoes');
     } catch (error) {
       console.error('Erro ao salvar rascunho:', error);
@@ -387,8 +277,7 @@ export const PTAMForm = () => {
       }
 
       setIsFinalized(true);
-      // Clear local storage on success
-      localStorage.removeItem(STORAGE_KEY);
+
       toast.success('Relatório finalizado com sucesso! 1 crédito foi descontado.');
     } catch (error) {
       console.error('Erro ao finalizar relatório:', error);

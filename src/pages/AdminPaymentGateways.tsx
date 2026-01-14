@@ -41,7 +41,7 @@ const AdminPaymentGateways = () => {
                 .order('name');
 
             if (error) throw error;
-            setGateways(data || []);
+            setGateways((data as unknown as PaymentGateway[]) || []);
         } catch (error) {
             console.error('Error fetching gateways:', error);
             toast.error('Erro ao carregar gateways de pagamento');

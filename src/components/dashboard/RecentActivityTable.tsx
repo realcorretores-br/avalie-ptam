@@ -60,7 +60,7 @@ export function RecentActivityTable() {
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h2 className="text-xl font-bold text-slate-900">Atividades Recentes</h2>
-                    <p className="text-sm text-slate-500 mt-1">Seus últimos pareceres emitidos.</p>
+                    <p className="text-sm text-slate-500 mt-1">Seus últimos parecers emitidos.</p>
                 </div>
                 <Button
                     variant="ghost"

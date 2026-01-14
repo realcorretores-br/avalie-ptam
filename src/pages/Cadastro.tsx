@@ -13,6 +13,8 @@ import { useCEP } from "@/hooks/useCEP";
 import { useAuth } from "@/hooks/useAuth";
 import { ConfirmacaoCadastro } from "@/components/ConfirmacaoCadastro";
 import { z } from "zod";
+import { normalizeCRECI, normalizeCAU, normalizeCREA, normalizeCNAI } from "@/lib/maskUtils";
+import { validateCPF } from "@/lib/validators";
 
 const CadastroSchema = z.object({
   nomeCompleto: z.string().trim().min(3, 'Nome deve ter no mínimo 3 caracteres').max(200, 'Nome muito longo'),
@@ -39,6 +41,13 @@ const CadastroSchema = z.object({
 }).refine((data) => data.senha === data.confirmarSenha, {
   message: 'As senhas não coincidem',
   path: ['confirmarSenha'],
+}).refine((data) => {
+  if (!data.cpf) return true; // Optional or empty handled by regex/optional
+  // Only validate if it has content (regex already checks basic format, but let's be safe)
+  return validateCPF(data.cpf);
+}, {
+  message: 'CPF inválido',
+  path: ['cpf'],
 });
 
 const Cadastro = () => {
@@ -162,6 +171,28 @@ const Cadastro = () => {
     if (!tipoAvaliador) {
       toast.error('Selecione o tipo de avaliador');
       return;
+    }
+
+    // Verificação de Unicidade do CPF (via RPC)
+    if (!estrangeiro && formData.cpf) {
+      setLoading(true);
+      try {
+        const { data: exists, error: checkError } = await (supabase.rpc as any)('check_cpf_availability', {
+          cpf_to_check: formData.cpf
+        });
+
+        if (checkError) {
+          console.warn('CPF check skipped or failed:', checkError);
+          // If the function doesn't exist, we proceed and let the Unique Constraint (if present) handle it later.
+        } else if (exists) {
+          toast.error('Este CPF já está cadastrado. Por favor, faça login ou recupere sua senha.');
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking CPF:', err);
+      }
+      setLoading(false);
     }
 
     // Mostrar popup de confirmação
@@ -551,8 +582,10 @@ const Cadastro = () => {
                 <Input
                   id="creci"
                   value={formData.creci}
-                  onChange={(e) => setFormData(prev => ({ ...prev, creci: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, creci: normalizeCRECI(e.target.value) }))}
                   required
+                  placeholder="00000"
+                  maxLength={7}
                 />
               </div>
             )}
@@ -563,8 +596,10 @@ const Cadastro = () => {
                 <Input
                   id="cau"
                   value={formData.cau}
-                  onChange={(e) => setFormData(prev => ({ ...prev, cau: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, cau: normalizeCAU(e.target.value) }))}
                   required
+                  placeholder="A00000-0"
+                  maxLength={8}
                 />
               </div>
             )}
@@ -575,8 +610,10 @@ const Cadastro = () => {
                 <Input
                   id="crea"
                   value={formData.crea}
-                  onChange={(e) => setFormData(prev => ({ ...prev, crea: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, crea: normalizeCREA(e.target.value) }))}
                   required
+                  placeholder="000000000-0"
+                  maxLength={11}
                 />
               </div>
             )}
@@ -587,7 +624,9 @@ const Cadastro = () => {
                 <Input
                   id="cnai"
                   value={formData.cnai}
-                  onChange={(e) => setFormData(prev => ({ ...prev, cnai: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, cnai: normalizeCNAI(e.target.value) }))}
+                  placeholder="00000"
+                  maxLength={6}
                 />
               </div>
 

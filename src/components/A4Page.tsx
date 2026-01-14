@@ -13,7 +13,7 @@ export const A4Page = React.forwardRef<HTMLDivElement, A4PageProps>(
         ref={ref}
         className={cn(
           "a4-page relative mx-auto bg-white text-black shadow-lg mb-8 overflow-hidden",
-          "print:shadow-none print:mb-0 print:mx-0 print:w-full print:h-auto print:overflow-visible",
+          "print:shadow-none print:mb-0 print:mx-0 print:w-[210mm] print:min-h-[297mm] print:overflow-visible",
           className
         )}
         style={{

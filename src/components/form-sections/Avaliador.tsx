@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { normalizeCRECI, normalizeCAU, normalizeCREA, normalizeCNAI } from "@/lib/maskUtils";
 
 interface AvaliadorProps {
   data: PTAMData;
@@ -137,8 +138,9 @@ export const Avaliador = ({ data, updateData }: AvaliadorProps) => {
               <Input
                 id="avaliadorCNAI"
                 value={data.avaliadorCNAI || ""}
-                onChange={(e) => updateData({ avaliadorCNAI: e.target.value })}
-                placeholder="Ex: 12345"
+                onChange={(e) => updateData({ avaliadorCNAI: normalizeCNAI(e.target.value) })}
+                placeholder="00000"
+                maxLength={6}
                 disabled
               />
             </div>
@@ -167,8 +169,9 @@ export const Avaliador = ({ data, updateData }: AvaliadorProps) => {
               <Input
                 id="avaliadorCRECI"
                 value={data.avaliadorCRECI || ""}
-                onChange={(e) => updateData({ avaliadorCRECI: e.target.value })}
-                placeholder="Ex: 12345"
+                onChange={(e) => updateData({ avaliadorCRECI: normalizeCRECI(e.target.value) })}
+                placeholder="00000"
+                maxLength={7}
                 disabled
               />
             </div>
@@ -197,8 +200,9 @@ export const Avaliador = ({ data, updateData }: AvaliadorProps) => {
               <Input
                 id="avaliadorCAU"
                 value={data.avaliadorCAU || ""}
-                onChange={(e) => updateData({ avaliadorCAU: e.target.value })}
-                placeholder="Ex: A123456"
+                onChange={(e) => updateData({ avaliadorCAU: normalizeCAU(e.target.value) })}
+                placeholder="A00000-0"
+                maxLength={8}
                 disabled
               />
             </div>
@@ -227,8 +231,9 @@ export const Avaliador = ({ data, updateData }: AvaliadorProps) => {
               <Input
                 id="avaliadorCREA"
                 value={data.avaliadorCREA || ""}
-                onChange={(e) => updateData({ avaliadorCREA: e.target.value })}
-                placeholder="Ex: 123456/RS"
+                onChange={(e) => updateData({ avaliadorCREA: normalizeCREA(e.target.value) })}
+                placeholder="000000000-0"
+                maxLength={11}
                 disabled
               />
             </div>

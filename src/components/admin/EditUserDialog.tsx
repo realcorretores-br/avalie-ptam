@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { maskCPF, maskRG, maskCNPJ } from "@/lib/masks";
+import { normalizeCRECI, normalizeCAU, normalizeCREA, normalizeCNAI } from "@/lib/maskUtils";
+import { validateCPF } from "@/lib/validators";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,6 +85,10 @@ export const EditUserDialog = ({ open, onOpenChange, userId, onSuccess }: EditUs
   }, [open, userId]);
 
   const handleSave = async () => {
+    if (formData.cpf && !validateCPF(formData.cpf)) {
+      toast.error('CPF inválido. Verifique o número digitado.');
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase
@@ -259,7 +265,8 @@ export const EditUserDialog = ({ open, onOpenChange, userId, onSuccess }: EditUs
               <Input
                 id="creci"
                 value={formData.creci}
-                onChange={(e) => setFormData({ ...formData, creci: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, creci: normalizeCRECI(e.target.value) })}
+                maxLength={7}
               />
             </div>
             <div>
@@ -267,7 +274,8 @@ export const EditUserDialog = ({ open, onOpenChange, userId, onSuccess }: EditUs
               <Input
                 id="cau"
                 value={formData.cau}
-                onChange={(e) => setFormData({ ...formData, cau: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, cau: normalizeCAU(e.target.value) })}
+                maxLength={8}
               />
             </div>
             <div>
@@ -275,7 +283,8 @@ export const EditUserDialog = ({ open, onOpenChange, userId, onSuccess }: EditUs
               <Input
                 id="crea"
                 value={formData.crea}
-                onChange={(e) => setFormData({ ...formData, crea: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, crea: normalizeCREA(e.target.value) })}
+                maxLength={11}
               />
             </div>
           </div>
@@ -286,7 +295,8 @@ export const EditUserDialog = ({ open, onOpenChange, userId, onSuccess }: EditUs
               <Input
                 id="cnae"
                 value={formData.cnae}
-                onChange={(e) => setFormData({ ...formData, cnae: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, cnae: normalizeCNAI(e.target.value) })}
+                maxLength={6}
               />
             </div>
             <div>

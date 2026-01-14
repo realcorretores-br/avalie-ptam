@@ -24,6 +24,8 @@ import { Badge } from "@/components/ui/badge";
 import { ThemeColorPicker } from "@/components/ThemeColorPicker";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { maskCPF, maskRG, maskCNPJ } from "@/lib/masks";
+import { normalizeCRECI, normalizeCAU, normalizeCREA, normalizeCNAI } from "@/lib/maskUtils";
+import { validateCPF } from "@/lib/validators";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 
@@ -234,6 +236,11 @@ const Perfil = () => {
 
   const handleSaveProfile = async () => {
     if (!user) return;
+
+    if (!estrangeiro && formData.cpf && !validateCPF(formData.cpf)) {
+      toast.error('CPF inválido. Verifique o número digitado.');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -599,7 +606,8 @@ const Perfil = () => {
                       <Input
                         id="cnae"
                         value={formData.cnae}
-                        onChange={(e) => setFormData(prev => ({ ...prev, cnae: e.target.value }))}
+                        onChange={(e) => setFormData(prev => ({ ...prev, cnae: normalizeCNAI(e.target.value) }))}
+                        maxLength={6}
                       />
                     </div>
                     <div>

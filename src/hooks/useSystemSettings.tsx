@@ -40,7 +40,7 @@ export const useSystemSettings = () => {
                 // If table doesn't exist or row missing, ensure we fallback
                 setSettings(DEFAULT_SETTINGS);
             } else if (data) {
-                setSettings(data as SystemSettings);
+                setSettings(data as unknown as SystemSettings);
             }
         } catch (error) {
             console.error('Error in useSystemSettings:', error);

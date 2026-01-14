@@ -13,30 +13,53 @@ export const exportToPDF = async (elements: HTMLElement[], filename: string) => 
       compress: true
     });
 
-    const imgWidth = 210; // A4 width in mm
-    const imgHeight = 297; // A4 height in mm
+    const pdfWidth = 210;
+    const pdfHeight = 297;
 
     for (let i = 0; i < elements.length; i++) {
       const element = elements[i];
 
-      // Add new page if not the first one
-      if (i > 0) {
-        pdf.addPage();
-      }
-
       const canvas = await html2canvas(element, {
-        scale: 2, // Higher scale for better quality
+        scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
-        width: element.offsetWidth, // Ensure we capture the full width
-        height: element.offsetHeight // Ensure we capture the full height
+        // Important: capture full scroll height
+        height: element.scrollHeight,
+        windowHeight: element.scrollHeight
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95); // Slightly lower quality for smaller file size
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
-      // Add image to PDF, stretching to fit A4
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      // Calculate dimensions in PDF units
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfImgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      // If content fits in one page
+      if (pdfImgHeight <= pdfHeight) {
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfImgHeight);
+      } else {
+        // Content is taller than A4 - Split it across pages
+        let heightLeft = pdfImgHeight;
+        let position = 0;
+        let firstPage = true;
+
+        // Tolerance of 1mm to avoid creating blank pages for sub-pixel overflows
+        while (heightLeft > 1) {
+          if (i > 0 || !firstPage) {
+            pdf.addPage();
+          }
+
+          // Draw the slice
+          // The image is drawn moved up by 'position' (negative) to show the next slice
+          pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfImgHeight);
+
+          heightLeft -= pdfHeight;
+          position -= pdfHeight; // Move the image up for the next page
+          firstPage = false;
+        }
+      }
     }
 
     pdf.save(filename);
@@ -84,7 +107,7 @@ export const exportToDOCX = async (data: PTAMData, filename: string) => {
             spacing: { before: 200, after: 100 }
           }),
           new Paragraph({
-            text: `Essa avaliação foi realizada por ${data.avaliadorNome}, inscrito no CPF n.º ${data.avaliadorCPF}.${data.avaliadorCNPJ ? ` CNPJ: ${data.avaliadorCNPJ}.` : ''}${data.avaliadorCRECI ? ` CRECI: ${data.avaliadorCRECI}.` : ''}${data.avaliadorCNAE ? ` CNAE: ${data.avaliadorCNAE}.` : ''}`,
+            text: `Essa avaliação foi realizada por ${data.avaliadorNome}, inscrito no CPF n.º ${data.avaliadorCPF}.${data.avaliadorCNPJ ? ` CNPJ: ${data.avaliadorCNPJ}.` : ''}${data.avaliadorCRECI ? ` CRECI: ${data.avaliadorCRECI}.` : ''}${data.avaliadorCNAI ? ` CNAI: ${data.avaliadorCNAI}.` : ''}`,
             spacing: { after: 200 }
           }),
 
@@ -345,8 +368,8 @@ export const exportToDOCX = async (data: PTAMData, filename: string) => {
             alignment: AlignmentType.CENTER,
             spacing: { after: 50 }
           })] : []),
-          ...(data.avaliadorCNAE ? [new Paragraph({
-            text: `CNAE: ${data.avaliadorCNAE}`,
+          ...(data.avaliadorCNAI ? [new Paragraph({
+            text: `CNAI: ${data.avaliadorCNAI}`,
             alignment: AlignmentType.CENTER,
             spacing: { after: 50 }
           })] : []),

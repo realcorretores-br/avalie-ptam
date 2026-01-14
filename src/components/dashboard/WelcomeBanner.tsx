@@ -46,7 +46,7 @@ export function WelcomeBanner() {
     const handleClaimBonus = async () => {
         setClaiming(true);
         try {
-            const { error } = await supabase.rpc('claim_bonus');
+            const { error } = await supabase.rpc('claim_bonus' as any);
             if (error) throw error;
             toast.success("Crédito bônus resgatado com sucesso!");
             window.location.reload(); // Simple reload to refresh everything
