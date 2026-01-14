@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useRole } from "@/hooks/useRole";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, FileText, Download, ArrowLeft, Trash2, Eye, AlertCircle, Edit } from "lucide-react";
+import { Building2, FileText, Download, ArrowLeft, Trash2, Eye, AlertCircle, Edit, User, Award } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { PTAMPreview } from "@/components/PTAMPreview";
@@ -298,9 +298,16 @@ const AvaliacoesSalvas = () => {
                       <h3 className="font-semibold text-lg mb-1 pr-8">
                         {avaliacao.endereco_imovel || 'Endereço não informado'}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground mb-3">
                         {avaliacao.tipo_imovel || 'Tipo não informado'}
                       </p>
+
+                      <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-md">
+                        <User className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium truncate">
+                          {avaliacao.form_data?.solicitanteNome || 'Cliente não informado'}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="space-y-1 text-sm">
@@ -314,13 +321,17 @@ const AvaliacoesSalvas = () => {
                           R$ {avaliacao.valor_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                       )}
-                      <div>
+                      <div className="flex items-center gap-2 mt-2">
                         <span className="font-medium">Status:</span>{' '}
-                        <Badge variant={avaliacao.status === 'finalizado' ? 'default' : 'secondary'}>
-                          {avaliacao.status === 'finalizado' ? 'Finalizado' : 'Rascunho'}
+                        <Badge
+                          variant={avaliacao.status === 'finalizado' ? 'default' : 'secondary'}
+                          className="gap-1 pl-2 pr-3 py-1"
+                        >
+                          {avaliacao.status === 'finalizado' && <Award className="h-3 w-3" />}
+                          {avaliacao.status === 'finalizado' ? 'Concluído' : 'Pendente'}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground pt-2">
                         {new Date(avaliacao.created_at).toLocaleDateString('pt-BR', {
                           day: '2-digit',
                           month: '2-digit',
@@ -345,25 +356,15 @@ const AvaliacoesSalvas = () => {
                           Continuar Edição
                         </Button>
                       ) : (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => navigate(`/dashboard/avaliacoes/${avaliacao.id}`)}
-                            className="flex-1"
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Visualizar
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleExport(avaliacao)}
-                            className="flex-1"
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Baixar PDF
-                          </Button>
-                        </>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/dashboard/avaliacoes/${avaliacao.id}`)}
+                          className="w-full"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Visualizar e Baixar PDF
+                        </Button>
                       )}
                     </div>
                   </div>

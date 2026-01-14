@@ -29,12 +29,12 @@ export function currencyToNumber(value: string): number {
 export function applyCurrencyMask(value: string): string {
   // Remove tudo exceto números
   const numbers = value.replace(/\D/g, "");
-  
+
   if (!numbers) return "";
-  
+
   // Converte para número e divide por 100 para ter as casas decimais
   const amount = parseFloat(numbers) / 100;
-  
+
   // Formata para o padrão brasileiro
   return formatCurrency(amount).replace("R$", "").trim();
 }
@@ -60,16 +60,16 @@ export function numericToNumber(value: string): number {
 export function applyCPFMask(value: string): string {
   const numbers = value.replace(/\D/g, "");
   if (!numbers) return "";
-  
+
   const match = numbers.match(/^(\d{0,3})(\d{0,3})(\d{0,3})(\d{0,2})$/);
   if (!match) return value;
-  
+
   const [, p1, p2, p3, p4] = match;
   let result = p1;
   if (p2) result += `.${p2}`;
   if (p3) result += `.${p3}`;
   if (p4) result += `-${p4}`;
-  
+
   return result;
 }
 
@@ -77,16 +77,16 @@ export function applyCPFMask(value: string): string {
 export function applyRGMask(value: string): string {
   const numbers = value.replace(/\D/g, "");
   if (!numbers) return "";
-  
+
   const match = numbers.match(/^(\d{0,2})(\d{0,3})(\d{0,3})(\d{0,1})$/);
   if (!match) return value;
-  
+
   const [, p1, p2, p3, p4] = match;
   let result = p1;
   if (p2) result += `.${p2}`;
   if (p3) result += `.${p3}`;
   if (p4) result += `-${p4}`;
-  
+
   return result;
 }
 
@@ -94,15 +94,15 @@ export function applyRGMask(value: string): string {
 export function applyDateMask(value: string): string {
   const numbers = value.replace(/\D/g, "");
   if (!numbers) return "";
-  
+
   const match = numbers.match(/^(\d{0,2})(\d{0,2})(\d{0,4})$/);
   if (!match) return value;
-  
+
   const [, day, month, year] = match;
   let result = day;
   if (month) result += `/${month}`;
   if (year) result += `/${year}`;
-  
+
   return result;
 }
 
@@ -125,20 +125,61 @@ export function formatDateToYYYYMMDD(value: string): string {
 // Valida se a data DD/MM/YYYY é válida
 export function isValidDate(dateStr: string): boolean {
   if (!dateStr) return false;
-  
+
   const parts = dateStr.split("/");
   if (parts.length !== 3) return false;
-  
+
   const day = parseInt(parts[0], 10);
   const month = parseInt(parts[1], 10);
   const year = parseInt(parts[2], 10);
-  
+
   if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
   if (month < 1 || month > 12) return false;
   if (day < 1) return false;
-  
+
   const daysInMonth = new Date(year, month, 0).getDate();
   if (day > daysInMonth) return false;
-  
+
   return true;
+}
+
+// Valida se o CPF é válido matematicamente
+export function isValidCPF(cpf: string): boolean {
+  if (!cpf) return false;
+
+  // Remove caracteres não numéricos
+  const cleanCPF = cpf.replace(/[^\d]+/g, '');
+
+  // Verifica se tem 11 dígitos
+  if (cleanCPF.length !== 11) return false;
+
+  // Verifica se todos os dígitos são iguais (ex: 111.111.111-11)
+  if (/^(\d)\1+$/.test(cleanCPF)) return false;
+
+  // Validação do primeiro dígito verificador
+  let soma = 0;
+  for (let i = 0; i < 9; i++) {
+    soma += parseInt(cleanCPF.charAt(i)) * (10 - i);
+  }
+  let resto = 11 - (soma % 11);
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(cleanCPF.charAt(9))) return false;
+
+  // Validação do segundo dígito verificador
+  soma = 0;
+  for (let i = 0; i < 10; i++) {
+    soma += parseInt(cleanCPF.charAt(i)) * (11 - i);
+  }
+  resto = 11 - (soma % 11);
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(cleanCPF.charAt(10))) return false;
+
+  return true;
+}
+
+// Valida se o nome é completo (pelo menos duas palavras)
+export function isValidFullName(name: string): boolean {
+  if (!name) return false;
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2 && parts.every(part => part.length >= 2);
 }

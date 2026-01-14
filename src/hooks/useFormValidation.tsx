@@ -19,11 +19,15 @@ const requiredFieldsBySection: { [key: number]: (keyof PTAMData)[] } = {
   14: ['cidadeParecer', 'dataParecer'], // Considerações Finais (obrigatório)
 };
 
+import { isValidCPF, isValidFullName } from "@/lib/utils";
+
 export const useFormValidation = () => {
   const validateSection = (sectionIndex: number, formData: PTAMData) => {
     const requiredFields = requiredFieldsBySection[sectionIndex] || [];
     const missingFields: string[] = [];
+    let errorMessage: string | null = null;
 
+    // 1. Check for empty required fields
     requiredFields.forEach((field) => {
       const value = formData[field];
       if (!value || (typeof value === 'string' && value.trim() === '')) {
@@ -31,9 +35,41 @@ export const useFormValidation = () => {
       }
     });
 
+    if (missingFields.length > 0) {
+      return {
+        isValid: false,
+        missingFields,
+        errorMessage: 'Por favor, preencha todos os campos obrigatórios.'
+      };
+    }
+
+    // 2. Strict Validations for Section 0 (Solicitante)
+    if (sectionIndex === 0) {
+      // Validate Name (Full Name)
+      if (!isValidFullName(formData.solicitanteNome)) {
+        return {
+          isValid: false,
+          missingFields: ['solicitanteNome'],
+          errorMessage: 'Por favor, informe o Nome Completo (Nome e Sobrenome).'
+        };
+      }
+
+      // Validate CPF (only if not foreigner)
+      if (!formData.solicitanteEstrangeiro) {
+        if (!isValidCPF(formData.solicitanteCPF)) {
+          return {
+            isValid: false,
+            missingFields: ['solicitanteCPF'],
+            errorMessage: 'O CPF informado é inválido.'
+          };
+        }
+      }
+    }
+
     return {
-      isValid: missingFields.length === 0,
-      missingFields,
+      isValid: true,
+      missingFields: [],
+      errorMessage: null
     };
   };
 

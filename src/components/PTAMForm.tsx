@@ -192,7 +192,7 @@ export const PTAMForm = () => {
     const validation = validateSection(currentSection, formData);
 
     if (!validation.isValid) {
-      toast.error('Por favor, preencha todos os campos obrigatórios antes de avançar.');
+      toast.error(validation.errorMessage || 'Por favor, preencha todos os campos obrigatórios antes de avançar.');
       return;
     }
 
