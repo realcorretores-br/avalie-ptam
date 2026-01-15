@@ -1,94 +1,135 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useAdminLog } from "@/hooks/useAdminLog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Send, Users, User } from "lucide-react";
 
 interface SendNotificationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export const SendNotificationDialog = ({ open, onOpenChange }: SendNotificationDialogProps) => {
-  const { logAction } = useAdminLog();
+export function SendNotificationDialog({ open, onOpenChange }: SendNotificationDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [type, setType] = useState<'mass' | 'individual'>('mass');
-  const [users, setUsers] = useState<any[]>([]);
-  const [selectedUser, setSelectedUser] = useState<string>('');
-  const [formData, setFormData] = useState({
-    title: '',
-    message: '',
-  });
+  const [type, setType] = useState<"all" | "single" | "city">("all");
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [users, setUsers] = useState<{ id: string, name: string, email: string }[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) {
-      fetchUsers();
+      if (type === 'single') fetchUsers();
+      if (type === 'city') fetchCities();
     }
-  }, [open]);
+  }, [open, type]);
 
   const fetchUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, nome_completo, email')
-        .order('nome_completo');
-
-      if (error) throw error;
-      setUsers(data || []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
+    const { data } = await supabase.from('profiles').select('id, nome_completo, email').limit(50);
+    if (data) {
+      setUsers(data.map(u => ({
+        id: u.id,
+        name: u.nome_completo || 'Sem nome',
+        email: u.email || ''
+      })));
     }
   };
 
-  const handleSend = async () => {
-    if (!formData.title.trim() || !formData.message.trim()) {
-      toast.error('Preencha todos os campos');
-      return;
+  const fetchCities = async () => {
+    const { data } = await supabase.from('profiles').select('cidade');
+    if (data) {
+      const uniqueCities = Array.from(new Set(data.map(p => p.cidade).filter(Boolean))).sort();
+      setCities(uniqueCities);
     }
+  };
 
-    if (type === 'individual' && !selectedUser) {
-      toast.error('Selecione um usuário');
-      return;
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !message) return toast.error("Preencha título e mensagem.");
+    if (type === 'single' && !selectedUserId) return toast.error("Selecione um usuário.");
+    if (type === 'city' && !selectedCity) return toast.error("Selecione uma cidade.");
 
-    setLoading(true);
     try {
-      const { error } = await supabase.rpc('send_notification', {
-        p_title: formData.title,
-        p_message: formData.message,
-        p_user_id: type === 'individual' ? selectedUser : null,
-        p_is_mass: type === 'mass'
-      });
+      setLoading(true);
+
+      let notificationsToInsert = [];
+
+      if (type === 'all') {
+        notificationsToInsert.push({
+          title,
+          message,
+          read: false,
+          created_at: new Date().toISOString(),
+          is_mass: true,
+          user_id: null
+        });
+      } else if (type === 'single') {
+        notificationsToInsert.push({
+          title,
+          message,
+          read: false,
+          created_at: new Date().toISOString(),
+          is_mass: false,
+          user_id: selectedUserId
+        });
+      } else if (type === 'city') {
+        // Fetch all users in the city
+        const { data: cityUsers, error: cityError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('cidade', selectedCity);
+
+        if (cityError) throw cityError;
+        if (!cityUsers || cityUsers.length === 0) {
+          toast.error("Nenhum usuário encontrado nesta cidade.");
+          setLoading(false);
+          return;
+        }
+
+        notificationsToInsert = cityUsers.map(u => ({
+          title,
+          message,
+          read: false,
+          created_at: new Date().toISOString(),
+          is_mass: false,
+          user_id: u.id
+        }));
+      }
+
+      const { error } = await supabase.from("notifications").insert(notificationsToInsert);
 
       if (error) throw error;
 
-      if (type === 'mass') {
-        await logAction('send_mass_notification', {
-          title: formData.title,
-          recipientCount: users.length
-        });
-        toast.success(`Notificação enviada para todos os usuários!`);
-      } else {
-        const selectedUserName = users.find(u => u.id === selectedUser)?.nome_completo;
-        await logAction('send_individual_notification', {
-          title: formData.title,
-          recipient: selectedUserName
-        });
-        toast.success('Notificação enviada com sucesso!');
-      }
-
-      setFormData({ title: '', message: '' });
-      setSelectedUser('');
+      toast.success("Notificação enviada com sucesso!");
       onOpenChange(false);
-    } catch (error) {
-      console.error('Error sending notification:', error);
-      toast.error('Erro ao enviar notificação: ' + (error as any).message);
+      setTitle("");
+      setMessage("");
+      setSelectedUserId("");
+      setSelectedCity("");
+      setType("all");
+
+    } catch (error: any) {
+      toast.error("Erro ao enviar notificação: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -96,41 +137,72 @@ export const SendNotificationDialog = ({ open, onOpenChange }: SendNotificationD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Enviar Notificação</DialogTitle>
+          <DialogDescription>
+            Envie alertas, novidades ou avisos para os usuários do sistema.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
-            <Label>Tipo de Envio</Label>
-            <RadioGroup value={type} onValueChange={(value: any) => setType(value)}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="mass" id="mass" />
-                <Label htmlFor="mass" className="cursor-pointer">
-                  Envio em Massa (todos os usuários)
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="individual" id="individual" />
-                <Label htmlFor="individual" className="cursor-pointer">
-                  Envio Individual
-                </Label>
-              </div>
-            </RadioGroup>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Destinatário</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={type === 'all' ? 'default' : 'outline'}
+                onClick={() => setType('all')}
+                className="flex-1 text-xs px-2"
+              >
+                <Users className="w-3 h-3 mr-1" /> Todos
+              </Button>
+              <Button
+                type="button"
+                variant={type === 'city' ? 'default' : 'outline'}
+                onClick={() => setType('city')}
+                className="flex-1 text-xs px-2"
+              >
+                <Users className="w-3 h-3 mr-1" /> Por Cidade
+              </Button>
+              <Button
+                type="button"
+                variant={type === 'single' ? 'default' : 'outline'}
+                onClick={() => setType('single')}
+                className="flex-1 text-xs px-2"
+              >
+                <User className="w-3 h-3 mr-1" /> Único
+              </Button>
+            </div>
           </div>
 
-          {type === 'individual' && (
-            <div>
-              <Label htmlFor="user">Selecionar Usuário</Label>
-              <Select value={selectedUser} onValueChange={setSelectedUser}>
+          {type === 'city' && (
+            <div className="space-y-2">
+              <Label>Selecione a Cidade</Label>
+              <Select value={selectedCity} onValueChange={setSelectedCity}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Escolha um usuário..." />
+                  <SelectValue placeholder="Selecione uma cidade..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.nome_completo} ({user.email})
+                  {cities.map(city => (
+                    <SelectItem key={city} value={city}>{city}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {type === 'single' && (
+            <div className="space-y-2">
+              <Label>Selecione o Usuário</Label>
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um usuário..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map(u => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name} ({u.email})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -138,43 +210,37 @@ export const SendNotificationDialog = ({ open, onOpenChange }: SendNotificationD
             </div>
           )}
 
-          <div>
-            <Label htmlFor="title">Título</Label>
+          <div className="space-y-2">
+            <Label>Título</Label>
             <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Título da notificação"
+              placeholder="Ex: Manutenção Programada"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
             />
           </div>
 
-          <div>
-            <Label htmlFor="message">Mensagem</Label>
+          <div className="space-y-2">
+            <Label>Mensagem</Label>
             <Textarea
-              id="message"
-              value={formData.message}
-              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-              placeholder="Digite a mensagem..."
-              rows={5}
+              placeholder="Digite sua mensagem aqui..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={4}
             />
           </div>
 
-          {type === 'mass' && (
-            <p className="text-sm text-muted-foreground">
-              Esta notificação será enviada para {users.length} usuários.
-            </p>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSend} disabled={loading}>
-            {loading ? 'Enviando...' : 'Enviar Notificação'}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700">
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Send className="w-4 h-4 mr-2" />
+              Enviar
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
-};
+}

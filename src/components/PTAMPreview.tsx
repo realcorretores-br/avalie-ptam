@@ -61,14 +61,21 @@ export const PTAMPreview = ({ data }: PTAMPreviewProps) => {
             border: none !important;
             width: 210mm !important;
             height: auto !important; /* Allow expansion */
-            min-height: 297mm !important;
+            min-height: auto !important; /* Remove min-height constraint for print to avoid huge gaps if content is small */
             overflow: visible !important; /* Show overflow content */
             break-inside: auto;
+            display: block !important; /* Disable flex in print to avoid justification issues */
           }
            
           /* Hide Scrollbars */
           ::-webkit-scrollbar {
             display: none;
+          }
+
+          /* Utility to avoid breaking inside sections */
+          .print-break-inside-avoid {
+              break-inside: avoid;
+              page-break-inside: avoid;
           }
         }
       `}</style>
@@ -102,7 +109,7 @@ export const PTAMPreview = ({ data }: PTAMPreviewProps) => {
       {/* PÁGINA 2: DADOS INICIAIS */}
       <A4Page className="a4-page-content space-y-6 text-justify">
         {/* 1. Solicitante */}
-        <section>
+        <section className="print-break-inside-avoid">
           <h2 className="mb-3 text-xl font-bold border-b pb-2">1. Solicitante</h2>
           <p className="leading-relaxed">
             {data.solicitanteNome}, {data.solicitanteNacionalidade}, {data.solicitanteEstadoCivil}, {data.solicitanteProfissao},
@@ -149,7 +156,7 @@ export const PTAMPreview = ({ data }: PTAMPreviewProps) => {
         </section>
 
         {/* 6. Localização */}
-        <section>
+        <section className="print-break-inside-avoid">
           <h2 className="mb-3 text-xl font-bold border-b pb-2">6. Localização e Infraestrutura</h2>
           <p className="leading-relaxed mb-2">
             Imóvel localizado em {data.enderecoImovel}, n.º {data.numeroImovel}.
@@ -159,7 +166,7 @@ export const PTAMPreview = ({ data }: PTAMPreviewProps) => {
           </p>
           <p className="leading-relaxed">{data.descricaoLocalizacao}</p>
           {(data.localizacaoImagemAnotada || data.localizacaoImagem) && (
-            <div className="mt-4 flex justify-center">
+            <div className="mt-4 flex justify-center print-break-inside-avoid">
               <div className="max-h-[300px] overflow-hidden rounded-lg border">
                 <img src={data.localizacaoImagemAnotada || data.localizacaoImagem} alt="Localização do imóvel" className="w-full h-full object-cover" />
               </div>
@@ -181,7 +188,7 @@ export const PTAMPreview = ({ data }: PTAMPreviewProps) => {
 
           <div className="grid grid-cols-2 gap-4 mt-4">
             {(data.imovelImagemPrincipalAnotada || data.imovelImagemPrincipal) && (
-              <div className="col-span-2">
+              <div className="col-span-2 print-break-inside-avoid">
                 <div className="rounded-lg border overflow-hidden h-[300px]">
                   <img src={data.imovelImagemPrincipalAnotada || data.imovelImagemPrincipal} alt="Imagem principal" className="w-full h-full object-cover" />
                 </div>
@@ -199,13 +206,13 @@ export const PTAMPreview = ({ data }: PTAMPreviewProps) => {
         </section>
 
         {/* 8. Situação Documental */}
-        <section>
+        <section className="print-break-inside-avoid">
           <h2 className="mb-3 text-xl font-bold border-b pb-2">8. Situação documental</h2>
           <p className="leading-relaxed">{data.situacaoDocumental}</p>
         </section>
 
         {/* 9. Fatores */}
-        <section>
+        <section className="print-break-inside-avoid">
           <h2 className="mb-3 text-xl font-bold border-b pb-2">9. Fatores Influenciantes</h2>
           <div className="grid grid-cols-2 gap-6">
             <div>
@@ -237,7 +244,7 @@ export const PTAMPreview = ({ data }: PTAMPreviewProps) => {
         </section>
 
         {/* 11. Valores */}
-        <section>
+        <section className="print-break-inside-avoid">
           <h2 className="mb-4 text-xl font-bold border-b pb-2">11. Quadro Resumo de Valores</h2>
 
           <div className="overflow-hidden rounded-lg border border-gray-200">
@@ -276,7 +283,7 @@ export const PTAMPreview = ({ data }: PTAMPreviewProps) => {
         </section>
 
         {/* 12. Conclusão */}
-        <section>
+        <section className="print-break-inside-avoid">
           <h2 className="mb-3 text-xl font-bold border-b pb-2">12. Conclusão de Valor</h2>
           <div className="bg-gray-50 p-6 rounded-lg border text-center space-y-4">
             <p className="text-lg">O valor de mercado estimado para o imóvel é de:</p>

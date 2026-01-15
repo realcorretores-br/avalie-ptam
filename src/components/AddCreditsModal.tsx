@@ -109,7 +109,7 @@ export function AddCreditsModal({ open, onOpenChange, unitPrice: initialUnitPric
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="space-y-1">
                             <p className="font-medium">Quantidade</p>
-                            <p className="text-sm text-muted-foreground">R$ {price.toFixed(2)} / unidade</p>
+                            <p className="text-sm text-muted-foreground">R$ {price.toFixed(2).replace('.', ',')} / unidade</p>
                         </div>
 
                         <div className="flex items-center gap-3">
@@ -134,7 +134,7 @@ export function AddCreditsModal({ open, onOpenChange, unitPrice: initialUnitPric
 
                     <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
                         <span className="font-semibold">Total a pagar:</span>
-                        <span className="text-xl font-bold text-primary">R$ {(quantity * price).toFixed(2)}</span>
+                        <span className="text-xl font-bold text-primary">R$ {(quantity * price).toFixed(2).replace('.', ',')}</span>
                     </div>
                 </div>
 

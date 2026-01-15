@@ -121,7 +121,7 @@ const Planos = () => {
               <PlanCard
                 key={pkg.id}
                 title={pkg.nome}
-                price={pkg.preco.toFixed(0)}
+                price={pkg.preco.toFixed(2).replace('.', ',')}
                 period=""
                 features={features}
                 buttonText="Comprar Créditos"

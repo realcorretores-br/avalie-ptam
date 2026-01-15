@@ -38,7 +38,7 @@ export const CreatePlanDialog = ({ open, onOpenChange, onSuccess }: CreatePlanDi
       // Validate input
       const validationResult = PlanSchema.safeParse({
         nome,
-        preco: parseFloat(preco.replace(',', '.')),
+        preco: parseFloat(preco.replace(',', '.')) || 0,
         relatorios: parseInt(relatorios),
         descricao: descricao || undefined,
       });

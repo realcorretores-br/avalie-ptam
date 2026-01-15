@@ -1,128 +1,134 @@
-import { useState, useEffect } from "react";
-import { maskCPF, maskRG, maskCNPJ } from "@/lib/masks";
-import { normalizeCRECI, normalizeCAU, normalizeCREA, normalizeCNAI } from "@/lib/maskUtils";
-import { validateCPF } from "@/lib/validators";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useAdminLog } from "@/hooks/useAdminLog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
+
+const userSchema = z.object({
+  // Personal
+  nome_completo: z.string().min(1, "Nome é obrigatório"),
+  email: z.string().email("Email inválido"),
+  cpf: z.string().optional(),
+  rg: z.string().optional(),
+  telefone: z.string().optional(),
+
+  // Address
+  cep: z.string().optional(),
+  endereco: z.string().optional(),
+  numero: z.string().optional(),
+  complemento: z.string().optional(),
+  bairro: z.string().optional(),
+  cidade: z.string().optional(),
+  estado: z.string().length(2).optional().or(z.literal("")),
+
+  // Professional
+  creci: z.string().optional(),
+  cnai: z.string().optional(),
+  crea: z.string().optional(),
+  cau: z.string().optional(),
+  cnpj: z.string().optional(),
+});
 
 interface EditUserDialogProps {
+  user: any;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  userId: string;
-  onSuccess: () => void;
+  onUserUpdated: () => void;
 }
 
-export const EditUserDialog = ({ open, onOpenChange, userId, onSuccess }: EditUserDialogProps) => {
-  const { logAction } = useAdminLog();
+export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: EditUserDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    nome_completo: '',
-    email: '',
-    telefone: '',
-    cpf: '',
-    rg: '',
-    endereco: '',
-    numero: '',
-    complemento: '',
-    bairro: '',
-    cidade: '',
-    estado: '',
-    cep: '',
-    tipo_avaliador: '',
-    creci: '',
-    cau: '',
-    crea: '',
-    cnae: '',
-    cnpj: '',
+
+  const form = useForm<z.infer<typeof userSchema>>({
+    resolver: zodResolver(userSchema),
+    defaultValues: {},
   });
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
-
-        if (error) throw error;
-
-        setFormData({
-          nome_completo: data.nome_completo || '',
-          email: data.email || '',
-          telefone: data.telefone || '',
-          cpf: data.cpf || '',
-          rg: data.rg || '',
-          endereco: data.endereco || '',
-          numero: data.numero || '',
-          complemento: data.complemento || '',
-          bairro: data.bairro || '',
-          cidade: data.cidade || '',
-          estado: data.estado || '',
-          cep: data.cep || '',
-          tipo_avaliador: data.tipo_avaliador || '',
-          creci: data.creci || '',
-          cau: data.cau || '',
-          crea: data.crea || '',
-          cnae: data.cnae || '',
-          cnpj: data.cnpj || '',
-        });
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-        toast.error('Erro ao carregar perfil do usuário');
-      }
-    };
-
-    if (open && userId) {
-      fetchUserProfile();
+    if (user && open) {
+      // Fetch full profile details if user object is incomplete, but assuming we pass full profile or fetch here
+      // For now, let's assume we need to fetch specifically to be sure we have address etc
+      const fetchFullProfile = async () => {
+        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        if (data) {
+          form.reset({
+            nome_completo: data.nome_completo || "",
+            email: data.email || "",
+            cpf: data.cpf || "",
+            rg: data.rg || "",
+            telefone: data.telefone || "",
+            cep: data.cep || "",
+            endereco: data.endereco || "",
+            numero: data.numero || "",
+            complemento: data.complemento || "",
+            bairro: data.bairro || "",
+            cidade: data.cidade || "",
+            estado: data.estado || "",
+            creci: data.creci || "",
+            cnai: data.cgae || data.cnai || "", // Handling typo/mapping
+            crea: data.crea || "",
+            cau: data.cau || "",
+            cnpj: data.cnpj || "",
+          });
+        }
+      };
+      fetchFullProfile();
     }
-  }, [open, userId]);
+  }, [user, open, form]);
 
-  const handleSave = async () => {
-    if (formData.cpf && !validateCPF(formData.cpf)) {
-      toast.error('CPF inválido. Verifique o número digitado.');
-      return;
-    }
-    setLoading(true);
+  const onSubmit = async (values: z.infer<typeof userSchema>) => {
     try {
+      setLoading(true);
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({
-          nome_completo: formData.nome_completo,
-          telefone: formData.telefone,
-          cpf: formData.cpf,
-          rg: formData.rg,
-          endereco: formData.endereco,
-          numero: formData.numero,
-          complemento: formData.complemento,
-          bairro: formData.bairro,
-          cidade: formData.cidade,
-          estado: formData.estado,
-          cep: formData.cep,
-          tipo_avaliador: formData.tipo_avaliador,
-          creci: formData.creci,
-          cau: formData.cau,
-          crea: formData.crea,
-          cnae: formData.cnae,
-          cnpj: formData.cnpj,
+          nome_completo: values.nome_completo,
+          cpf: values.cpf,
+          rg: values.rg,
+          telefone: values.telefone,
+          cep: values.cep,
+          endereco: values.endereco,
+          numero: values.numero,
+          complemento: values.complemento,
+          bairro: values.bairro,
+          cidade: values.cidade,
+          estado: values.estado,
+          creci: values.creci,
+          cnai: values.cnai, // Ensure db column matches
+          crea: values.crea,
+          cau: values.cau,
+          cnpj: values.cnpj,
         })
-        .eq('id', userId);
+        .eq("id", user.id);
 
       if (error) throw error;
 
-      await logAction('edit_user_profile', { userId, changes: formData });
-      toast.success('Perfil atualizado com sucesso!');
-      onSuccess();
+      toast.success("Usuário atualizado com sucesso!");
+      onUserUpdated();
       onOpenChange(false);
-    } catch (error) {
-      console.error('Error updating user profile:', error);
-      toast.error('Erro ao atualizar perfil');
+    } catch (error: any) {
+      toast.error("Erro ao atualizar usuário: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -130,196 +136,110 @@ export const EditUserDialog = ({ open, onOpenChange, userId, onSuccess }: EditUs
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Perfil do Usuário</DialogTitle>
+          <DialogTitle>Editar Usuário</DialogTitle>
+          <DialogDescription>
+            Edite todas as informações do perfil do usuário.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="nome_completo">Nome Completo</Label>
-              <Input
-                id="nome_completo"
-                value={formData.nome_completo}
-                onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email (não editável)</Label>
-              <Input id="email" value={formData.email} disabled />
-            </div>
-          </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <Tabs defaultValue="personal" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="personal">Dados Pessoais</TabsTrigger>
+                <TabsTrigger value="address">Endereço</TabsTrigger>
+                <TabsTrigger value="professional">Profissional</TabsTrigger>
+              </TabsList>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="telefone">Telefone</Label>
-              <Input
-                id="telefone"
-                value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="cpf">CPF</Label>
-              <Input
-                id="cpf"
-                value={formData.cpf}
-                onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-              />
-            </div>
-          </div>
+              <TabsContent value="personal" className="space-y-4 py-4">
+                <FormField control={form.control} name="nome_completo" render={({ field }) => (
+                  <FormItem><FormLabel>Nome Completo</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="email" render={({ field }) => (
+                    <FormItem><FormLabel>Email (Apenas visualização)</FormLabel><FormControl><Input {...field} readOnly className="bg-slate-50" /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="telefone" render={({ field }) => (
+                    <FormItem><FormLabel>Telefone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="cpf" render={({ field }) => (
+                    <FormItem><FormLabel>CPF</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="rg" render={({ field }) => (
+                    <FormItem><FormLabel>RG</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
+              </TabsContent>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="rg">RG</Label>
-              <Input
-                id="rg"
-                value={formData.rg}
-                onChange={(e) => setFormData({ ...formData, rg: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="cep">CEP</Label>
-              <Input
-                id="cep"
-                value={formData.cep}
-                onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-              />
-            </div>
-          </div>
+              <TabsContent value="address" className="space-y-4 py-4">
+                <div className="grid grid-cols-4 gap-4">
+                  <FormField control={form.control} name="cep" render={({ field }) => (
+                    <FormItem className="col-span-1"><FormLabel>CEP</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="endereco" render={({ field }) => (
+                    <FormItem className="col-span-3"><FormLabel>Endereço</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-4 gap-4">
+                  <FormField control={form.control} name="numero" render={({ field }) => (
+                    <FormItem className="col-span-1"><FormLabel>Número</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="complemento" render={({ field }) => (
+                    <FormItem className="col-span-1"><FormLabel>Complemento</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="bairro" render={({ field }) => (
+                    <FormItem className="col-span-2"><FormLabel>Bairro</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="cidade" render={({ field }) => (
+                    <FormItem><FormLabel>Cidade</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="estado" render={({ field }) => (
+                    <FormItem><FormLabel>Estado (UF)</FormLabel><FormControl><Input {...field} maxLength={2} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
+              </TabsContent>
 
-          <div>
-            <Label htmlFor="endereco">Endereço</Label>
-            <Input
-              id="endereco"
-              value={formData.endereco}
-              onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-            />
-          </div>
+              <TabsContent value="professional" className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="creci" render={({ field }) => (
+                    <FormItem><FormLabel>CRECI</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="cnai" render={({ field }) => (
+                    <FormItem><FormLabel>CNAI</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="crea" render={({ field }) => (
+                    <FormItem><FormLabel>CREA</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="cau" render={({ field }) => (
+                    <FormItem><FormLabel>CAU</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
+                <FormField control={form.control} name="cnpj" render={({ field }) => (
+                  <FormItem><FormLabel>CNPJ (Empresa)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+              </TabsContent>
+            </Tabs>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="numero">Número</Label>
-              <Input
-                id="numero"
-                value={formData.numero}
-                onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="complemento">Complemento</Label>
-              <Input
-                id="complemento"
-                value={formData.complemento}
-                onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="bairro">Bairro</Label>
-              <Input
-                id="bairro"
-                value={formData.bairro}
-                onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="cidade">Cidade</Label>
-              <Input
-                id="cidade"
-                value={formData.cidade}
-                onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="estado">Estado</Label>
-              <Input
-                id="estado"
-                value={formData.estado}
-                onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                maxLength={2}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="tipo_avaliador">Tipo de Avaliador</Label>
-            <Select value={formData.tipo_avaliador} onValueChange={(value) => setFormData({ ...formData, tipo_avaliador: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="corretor">Corretor</SelectItem>
-                <SelectItem value="arquiteto">Arquiteto</SelectItem>
-                <SelectItem value="engenheiro">Engenheiro</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="creci">CRECI</Label>
-              <Input
-                id="creci"
-                value={formData.creci}
-                onChange={(e) => setFormData({ ...formData, creci: normalizeCRECI(e.target.value) })}
-                maxLength={7}
-              />
-            </div>
-            <div>
-              <Label htmlFor="cau">CAU</Label>
-              <Input
-                id="cau"
-                value={formData.cau}
-                onChange={(e) => setFormData({ ...formData, cau: normalizeCAU(e.target.value) })}
-                maxLength={8}
-              />
-            </div>
-            <div>
-              <Label htmlFor="crea">CREA</Label>
-              <Input
-                id="crea"
-                value={formData.crea}
-                onChange={(e) => setFormData({ ...formData, crea: normalizeCREA(e.target.value) })}
-                maxLength={11}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="cnae">CNAE</Label>
-              <Input
-                id="cnae"
-                value={formData.cnae}
-                onChange={(e) => setFormData({ ...formData, cnae: normalizeCNAI(e.target.value) })}
-                maxLength={6}
-              />
-            </div>
-            <div>
-              <Label htmlFor="cnpj">CNPJ</Label>
-              <Input
-                id="cnpj"
-                value={formData.cnpj}
-                onChange={(e) => setFormData({ ...formData, cnpj: maskCNPJ(e.target.value) })}
-                maxLength={18}
-              />
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={loading}>
-            {loading ? 'Salvando...' : 'Salvar Alterações'}
-          </Button>
-        </DialogFooter>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar Alterações
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
-};
+}

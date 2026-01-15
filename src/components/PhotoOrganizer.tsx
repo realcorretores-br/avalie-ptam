@@ -69,7 +69,7 @@ export const PhotoOrganizer = ({ images }: PhotoOrganizerProps) => {
                     <h3 className="text-sm font-semibold text-muted-foreground mb-2 text-center uppercase tracking-wider">Fotos Verticais</h3>
                     <div className="grid grid-cols-3 gap-4">
                         {portraitPhotos.map((img, index) => (
-                            <div key={img.id || index} className="flex flex-col items-center">
+                            <div key={img.id || index} className="flex flex-col items-center break-inside-avoid page-break-inside-avoid">
                                 {/* Altura reduzida para 3 colunas */}
                                 <div className="w-full h-[300px] border rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center p-1">
                                     <img
@@ -92,7 +92,7 @@ export const PhotoOrganizer = ({ images }: PhotoOrganizerProps) => {
                     {/* Grid de 3 colunas para horizontais */}
                     <div className="grid grid-cols-3 gap-4">
                         {landscapePhotos.map((img, index) => (
-                            <div key={img.id || index} className="flex flex-col items-center">
+                            <div key={img.id || index} className="flex flex-col items-center break-inside-avoid page-break-inside-avoid">
                                 <div className="w-full h-[200px] border rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center p-1">
                                     <img
                                         src={img.annotatedUrl || img.url}

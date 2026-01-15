@@ -1,98 +1,98 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-    CreditCard,
-    FileText,
-    LayoutTemplate,
-    AlertTriangle,
-    Settings,
-    Database,
-    ShoppingBag,
-    Activity
-} from "lucide-react";
+import { useRole } from "@/hooks/useRole";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DashboardOverview } from "@/components/admin/DashboardOverview";
+import { UserManagement } from "@/components/admin/UserManagement";
+import { SendNotificationDialog } from "@/components/admin/SendNotificationDialog";
+import { Download, Send, Bell, Users, Activity } from "lucide-react";
+import AdminLogs from "./admin/AdminLogs";
 
 export default function Admin() {
+    const { isAdmin, loading: roleLoading } = useRole();
     const navigate = useNavigate();
-
-    const menuItems = [
-        {
-            title: "CMS / Planos",
-            description: "Gerenciar planos, preços e conteúdo da landing page",
-            icon: <ShoppingBag className="h-8 w-8 text-blue-500" />,
-            path: "/dashboard/admin/cms",
-        },
-        {
-            title: "Gateways de Pagamento",
-            description: "Configurar chaves de API e métodos de pagamento",
-            icon: <CreditCard className="h-8 w-8 text-green-500" />,
-            path: "/dashboard/admin/gateways",
-        },
-        {
-            title: "Templates de Avaliação",
-            description: "Editar modelos e textos padrão para laudos",
-            icon: <LayoutTemplate className="h-8 w-8 text-purple-500" />,
-            path: "/dashboard/admin/templates",
-        },
-        {
-            title: "Conteúdo do Site",
-            description: "Gerenciar textos e imagens do site institucional",
-            icon: <FileText className="h-8 w-8 text-orange-500" />,
-            path: "/dashboard/conteudo",
-        },
-        {
-            title: "Configurações Globais",
-            description: "Ativar/desativar módulos e recursos do sistema",
-            icon: <Settings className="h-8 w-8 text-slate-500" />,
-            path: "/dashboard/admin/settings",
-        },
-        {
-            title: "Logs do Sistema",
-            description: "Visualizar histórico de ações administrativas",
-            icon: <Database className="h-8 w-8 text-indigo-500" />,
-            path: "/dashboard/admin/logs",
-        },
-        {
-            title: "Erros Reportados",
-            description: "Acompanhar bugs reportados pelos usuários",
-            icon: <AlertTriangle className="h-8 w-8 text-red-500" />,
-            path: "/dashboard/admin/erros",
-        },
-    ];
+    const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
     return (
         <AdminLayout>
-            <div className="space-y-8">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Painel Administrativo</h1>
-                    <p className="text-muted-foreground mt-2">
-                        Bem-vindo ao centro de controle da plataforma. Selecione um módulo abaixo.
-                    </p>
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-900">Painel Administrativo</h1>
+                        <p className="text-slate-500">Visão geral do desempenho e gestão da plataforma.</p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <Button variant="ghost" size="icon" className="relative">
+                            <Bell className="w-5 h-5 text-slate-500" />
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                        </Button>
+                        <Button variant="outline" className="gap-2 bg-white">
+                            <Download className="w-4 h-4" />
+                            Exportar
+                        </Button>
+                        <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setIsNotificationOpen(true)}>
+                            <Send className="w-4 h-4" />
+                            Notificar
+                        </Button>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {menuItems.map((item) => (
-                        <Card
-                            key={item.path}
-                            className="hover:shadow-md transition-shadow cursor-pointer border-slate-200"
-                            onClick={() => navigate(item.path)}
-                        >
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-base font-semibold">
-                                    {item.title}
-                                </CardTitle>
-                                {item.icon}
-                            </CardHeader>
-                            <CardContent>
-                                <CardDescription className="text-sm mt-2">
-                                    {item.description}
-                                </CardDescription>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+                {/* Tabs */}
+                <Tabs defaultValue="analytics" className="space-y-6">
+                    <div className="bg-slate-100/50 p-1 rounded-lg w-fit">
+                        <TabsList className="bg-transparent border-0 h-9 p-0 gap-1">
+                            <TabsTrigger
+                                value="analytics"
+                                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 h-8 text-slate-600 data-[state=active]:text-slate-900"
+                            >
+                                Analytics
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="users"
+                                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 h-8 text-slate-600 data-[state=active]:text-slate-900"
+                            >
+                                Usuários
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="logs"
+                                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 h-8 text-slate-600 data-[state=active]:text-slate-900"
+                            >
+                                Logs
+                            </TabsTrigger>
+                        </TabsList>
+                    </div>
+
+                    <TabsContent value="analytics" className="m-0 focus-visible:ring-0">
+                        <DashboardOverview />
+                    </TabsContent>
+
+                    <TabsContent value="users" className="m-0 focus-visible:ring-0">
+                        <UserManagement />
+                    </TabsContent>
+
+                    <TabsContent value="logs" className="m-0 focus-visible:ring-0">
+                        <div className="bg-white rounded-xl border border-dashed border-slate-200 p-12 flex flex-col items-center justify-center text-center">
+                            <div className="bg-slate-50 p-4 rounded-full mb-4">
+                                <Activity className="w-8 h-8 text-slate-400" />
+                            </div>
+                            <h3 className="text-lg font-medium text-slate-900">Logs do Sistema</h3>
+                            <p className="text-slate-500 max-w-sm mt-1">
+                                O histórico de atividades administrativas será exibido aqui.
+                            </p>
+                        </div>
+                    </TabsContent>
+                </Tabs>
+
+                <SendNotificationDialog
+                    open={isNotificationOpen}
+                    onOpenChange={setIsNotificationOpen}
+                />
             </div>
         </AdminLayout>
     );
 }
+
