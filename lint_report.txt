@@ -1,0 +1,2 @@
+C:\Users\silva\OneDrive\Área de Trabalho\AvaliePTAM\src\pages\Admin.tsx
+  1: React Hook useCallback has missing dependencies: 'subscriptions' and 'users'. Either include them or remove the dependency array. (react-hooks/exhaustive-deps) at line 313
