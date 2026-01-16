@@ -181,7 +181,7 @@ export const ImageUpload = ({
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {onAnnotate && (
               <Button
                 variant="outline"

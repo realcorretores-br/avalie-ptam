@@ -18,13 +18,29 @@ const VisualizarAvaliacao = () => {
   const [formData, setFormData] = useState<PTAMData | null>(null);
   const [loading, setLoading] = useState(true);
   const [printSettings, setPrintSettings] = useState<PrintSettings>(defaultPrintSettings);
+  const [scale, setScale] = useState(1);
 
+  useEffect(() => {
+    const handleResize = () => {
+      // 820px to include potential scrollbars or extra padding safety
+      // 32px is total horizontal padding (16px * 2)
+      const newScale = Math.min(1, (window.innerWidth - 32) / 800);
+      setScale(newScale);
+    };
+
+    // Initial calc
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // ... (Keep existing fetch logic)
   useEffect(() => {
     if (!user) {
       navigate('/login');
       return;
     }
-
     const fetchAvaliacao = async () => {
       const { data, error } = await supabase
         .from('avaliacoes')
@@ -38,25 +54,21 @@ const VisualizarAvaliacao = () => {
         navigate('/dashboard/avaliacoes-salvas');
         return;
       }
-
       setFormData(data.form_data as unknown as PTAMData);
       setLoading(false);
     };
-
     fetchAvaliacao();
   }, [id, user, navigate]);
 
+  // ... (Keep existing handlers)
   const handleExportPDF = async () => {
     try {
-      // Select all A4 pages
-      const pages = document.querySelectorAll('.a4-page'); // exportUtils targets .a4-page specifically now
+      const pages = document.querySelectorAll('.a4-page');
       if (!pages || pages.length === 0) {
         toast.error('Erro ao localizar o conteúdo para exportação');
         return;
       }
-
       toast.loading('Gerando PDF...');
-      // Convert NodeList to Array of HTMLElements
       await exportToPDF(Array.from(pages) as HTMLElement[], 'PTAM-Parecer-Tecnico.pdf');
       toast.dismiss();
       toast.success('PDF exportado com sucesso!');
@@ -79,18 +91,16 @@ const VisualizarAvaliacao = () => {
     );
   }
 
-  if (!formData) {
-    return null;
-  }
+  if (!formData) return null;
 
   return (
-    <div className="min-h-screen bg-muted/30 print:bg-white">
+    <div className="min-h-screen bg-muted/30 print:bg-white overflow-x-hidden">
       <div className="container mx-auto px-4 py-8 print:p-0 print:m-0 print:max-w-none">
         <div className="mb-6 flex items-center justify-center print:hidden">
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap justify-center">
             <Button
               variant="outline"
-              onClick={() => navigate('/dashboard/avaliacoes')}
+              onClick={() => navigate('/dashboard/avaliacoes/')}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar
@@ -112,12 +122,15 @@ const VisualizarAvaliacao = () => {
           </div>
         </div>
 
-        <div className="w-full flex justify-center overflow-hidden pb-4">
+        <div className="w-full flex justify-center pb-4 print:block print:w-auto">
+          {/* Wrapper to clip overflow and handle height of scaled content if necessary */}
           <div
-            className="origin-top transition-transform duration-200"
+            className="origin-top"
             style={{
-              transform: `scale(${Math.min(1, (window.innerWidth - 32) / 800)})`, // 800px approx A4 width + padding
-              width: '210mm'
+              transform: `scale(${scale})`,
+              width: '210mm',
+              // Fix for layout height not shrinking with scale:
+              marginBottom: `-${(1 - scale) * 100}%`
             }}
           >
             <PTAMPreview data={formData} printSettings={printSettings} />
